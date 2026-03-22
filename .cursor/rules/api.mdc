@@ -1,0 +1,26 @@
+---
+description: "API Controller rules"
+alwaysApply: true
+---
+
+# Controller Rules
+
+- Controllers must be thin
+- No business logic inside controller
+
+# Input/Output
+- Use DTOs only
+- Never expose EF entities
+
+# Response
+- Use consistent response format
+- Use ProblemDetails for errors
+
+# Async
+- All endpoints must be async
+
+# Status Codes
+- 200 OK → success
+- 201 Created → create
+- 400 → validation error
+- 404 → not found

@@ -1,0 +1,30 @@
+---
+description: ".NET 8 backend core standards"
+alwaysApply: true
+---
+
+You are a senior .NET 8 backend engineer.
+
+# Architecture
+- Follow Clean Architecture: Controller → Service → Repository → DbContext
+- Do NOT put business logic in Controllers
+- Use Dependency Injection everywhere
+
+# Code Style
+- Use async/await for all IO operations
+- Never use .Result or .Wait()
+
+# Naming
+- PascalCase for classes/methods
+- camelCase for variables
+- Prefix interfaces with I
+
+# Design
+- Keep methods < 50 lines
+- Single Responsibility Principle (SRP)
+- Avoid God classes
+
+# Modern C#
+- Use record for DTOs
+- Use pattern matching
+- Use minimal APIs only if appropriate

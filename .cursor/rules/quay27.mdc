@@ -1,0 +1,332 @@
+---
+description: Customer Sheet Management System (Thay thế Google Sheet)
+alwaysApply: true
+---
+# 📘 Customer Sheet Management System (Thay thế Google Sheet)
+
+## 1. 🎯 Mục tiêu hệ thống
+
+Xây dựng một hệ thống web thay thế Google Sheet nhằm:
+
+* Cho phép nhiều nhân viên cùng thao tác trên **1 bảng dữ liệu (sheet)**
+* Tự động lưu (auto-save) khi chỉnh sửa
+* Quản lý danh sách khách hàng theo **ngày (sheet theo ngày)**
+* Tự động chuyển khách chưa xử lý sang ngày tiếp theo
+* Đồng bộ dữ liệu sang các **Queue (ví dụ: Quầy 27)**
+* Ghi log toàn bộ lịch sử chỉnh sửa (audit log)
+* Phân quyền theo user và theo cột dữ liệu
+* Phát hiện và highlight dữ liệu trùng (duplicate)
+
+---
+
+## 2. 🧩 Phạm vi chức năng
+
+### 2.1 Quản lý khách hàng
+
+* CRUD khách hàng
+* Inline edit (giống Google Sheet)
+* Auto save khi thay đổi
+
+### 2.2 Quản lý theo ngày (SheetDate)
+
+* Mỗi record thuộc 1 ngày
+* UI hiển thị dạng tab theo ngày
+* Job tự động chuyển record sang ngày tiếp theo nếu chưa xử lý
+
+### 2.3 Quản lý Queue (Quầy)
+
+* Checkbox để đưa khách sang Queue
+* Uncheck → remove khỏi Queue
+
+### 2.4 Audit log
+
+* Lưu toàn bộ thay đổi:
+
+  * ai sửa
+  * sửa gì
+  * trước / sau
+
+### 2.5 Phân quyền
+
+* Admin: full quyền
+* Nhân viên:
+
+  * chỉ sửa được một số cột
+
+### 2.6 Duplicate detection
+
+* Trùng tên → highlight
+
+---
+
+## 3. 🧠 Business Rules
+
+### Rule 1: Auto Save
+
+* Khi user edit → gọi API update ngay
+* Không cần bấm Save
+
+---
+
+### Rule 2: Checkbox Queue
+
+| Action  | Behavior                |
+| ------- | ----------------------- |
+| Check   | Thêm vào CustomerQueues |
+| Uncheck | Xoá khỏi CustomerQueues |
+
+---
+
+### Rule 3: End of Day Job
+
+* Chạy lúc 00:00 mỗi ngày
+* Điều kiện:
+
+```
+Customer chưa nằm trong bất kỳ Queue nào
+```
+
+→ update:
+
+```
+SheetDate = SheetDate + 1
+```
+
+---
+
+### Rule 4: Audit log
+
+Mọi thay đổi phải lưu:
+
+```
+TableName
+ColumnName
+OldValue
+NewValue
+User
+Time
+```
+
+---
+
+### Rule 5: Permission
+
+* Kiểm tra quyền tại Service layer
+* Nếu không có quyền → reject
+
+---
+
+## 4. 🗄️ Database Schema
+
+---
+
+### 4.1 Users
+
+| Column       | Type     |
+| ------------ | -------- |
+| Id           | GUID     |
+| Username     | string   |
+| PasswordHash | string   |
+| FullName     | string   |
+| IsActive     | bool     |
+| CreatedDate  | datetime |
+
+---
+
+### 4.2 Roles
+
+| Column | Type   |
+| ------ | ------ |
+| Id     | int    |
+| Name   | string |
+
+---
+
+### 4.3 UserRoles
+
+| Column | Type |
+| ------ | ---- |
+| UserId | GUID |
+| RoleId | int  |
+
+---
+
+### 4.4 ColumnPermissions
+
+| Column     | Type   |
+| ---------- | ------ |
+| Id         | GUID   |
+| UserId     | GUID   |
+| TableName  | string |
+| ColumnName | string |
+| CanView    | bool   |
+| CanEdit    | bool   |
+
+---
+
+### 4.5 Customers
+
+| Column      | Type     |
+| ----------- | -------- |
+| Id          | GUID     |
+| Name        | string   |
+| Phone       | string   |
+| Address     | string   |
+| Note        | string   |
+| SheetDate   | date     |
+| Status      | string   |
+| IsDuplicate | bool     |
+| CreatedDate | datetime |
+| CreatedBy   | string   |
+| UpdatedDate | datetime |
+| UpdatedBy   | string   |
+| IsDeleted   | bool     |
+
+---
+
+### 4.6 Queues
+
+| Column   | Type   |
+| -------- | ------ |
+| Id       | int    |
+| Name     | string |
+| IsActive | bool   |
+
+---
+
+### 4.7 CustomerQueues
+
+| Column      | Type     |
+| ----------- | -------- |
+| Id          | GUID     |
+| CustomerId  | GUID     |
+| QueueId     | int      |
+| CreatedDate | datetime |
+| CreatedBy   | string   |
+
+---
+
+### 4.8 AuditLogs
+
+| Column      | Type     |
+| ----------- | -------- |
+| Id          | GUID     |
+| TableName   | string   |
+| RecordId    | GUID     |
+| ColumnName  | string   |
+| OldValue    | string   |
+| NewValue    | string   |
+| ActionType  | string   |
+| ChangedBy   | string   |
+| ChangedDate | datetime |
+
+---
+
+### 4.9 CustomerVersions
+
+| Column       | Type     |
+| ------------ | -------- |
+| Id           | GUID     |
+| CustomerId   | GUID     |
+| SnapshotData | JSON     |
+| CreatedBy    | string   |
+| CreatedDate  | datetime |
+
+---
+
+### 4.10 DuplicateFlags
+
+| Column           | Type |
+| ---------------- | ---- |
+| Id               | GUID |
+| CustomerId       | GUID |
+| DuplicateGroupId | int  |
+
+---
+
+## 5. 🔗 ERD (Entity Relationship Diagram)
+
+```
+Users
+  │
+  ├── UserRoles ─── Roles
+  │
+  └── ColumnPermissions
+
+
+Customers
+   │
+   ├── CustomerQueues ─── Queues
+   │
+   ├── DuplicateFlags
+   │
+   └── CustomerVersions
+
+
+AuditLogs (log tất cả bảng)
+```
+
+---
+
+## 6. 🔄 Data Flow
+
+### 6.1 Update dữ liệu
+
+```
+User edit cell
+   ↓
+API gọi update
+   ↓
+DB update
+   ↓
+Audit log
+   ↓
+Realtime push
+```
+
+---
+
+### 6.2 Queue Flow
+
+```
+Checkbox click
+   ↓
+Insert/Delete CustomerQueues
+```
+
+---
+
+### 6.3 End of Day Flow
+
+```
+00:00 Job
+   ↓
+Find pending customers
+   ↓
+Move to next day
+```
+
+---
+
+## 7. 🚀 Mở rộng tương lai
+
+Có thể mở rộng thêm:
+
+* Customer Tags
+* Call Logs
+* Report / Dashboard
+* Notification
+* Realtime collaboration (SignalR)
+
+---
+
+## 8. ✅ Kết luận
+
+Hệ thống này:
+
+* Thay thế hoàn toàn Google Sheet
+* Tăng khả năng kiểm soát dữ liệu
+* Tránh sai sót khi nhiều người cùng thao tác
+* Sẵn sàng scale thành CRM hoàn chỉnh
+
+---

@@ -1,0 +1,54 @@
+---
+description: "Entity Framework Core production rules"
+alwaysApply: true
+---
+
+You are an expert in Entity Framework Core.
+
+# DbContext
+- Use Scoped lifetime
+- One DbContext per request
+- Never share DbContext across threads
+
+# Query Rules
+- Always use async: ToListAsync, FirstOrDefaultAsync
+- Use AsNoTracking() for read-only queries
+- Use Select() to project only needed fields
+
+# Performance
+- Avoid N+1 queries → use Include / ThenInclude
+- Avoid loading full entities when not needed
+- Use pagination for large datasets
+
+# Tracking
+- Disable tracking for read-only
+- Enable tracking only when updating
+
+# Transactions
+- Use explicit transactions for multi-step operations
+- Ensure rollback on failure
+
+# Concurrency
+- Use RowVersion / ConcurrencyToken
+- Handle DbUpdateConcurrencyException
+
+# Raw SQL
+- Avoid raw SQL unless necessary
+- Use FromSqlInterpolated (safe)
+
+# SaveChanges
+- Call SaveChangesAsync once per unit of work
+- Never call SaveChanges inside loops
+
+# Indexing
+- Ensure indexes for frequently queried columns
+
+# Security
+- Prevent SQL Injection
+- Validate all inputs before query
+
+# Anti-patterns
+- ❌ N+1 query
+- ❌ Select * (full entity load)
+- ❌ Blocking async
+- ❌ Long-lived DbContext

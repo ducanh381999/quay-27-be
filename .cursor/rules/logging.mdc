@@ -1,0 +1,21 @@
+---
+description: "Logging and error handling"
+alwaysApply: true
+---
+
+# Logging
+
+- Use ILogger
+- Log:
+  - Errors
+  - Important business actions
+
+# Error Handling
+- Use global exception middleware
+- Do not try/catch everywhere
+
+# Security
+- Do not log sensitive data
+
+# Example
+_logger.LogError(ex, "Error processing payment for UserId={UserId}", userId);

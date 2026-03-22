@@ -1,0 +1,25 @@
+---
+description: "Service layer business logic rules"
+alwaysApply: true
+---
+
+# Service Rules
+
+- All business logic must be in Service layer
+- Service orchestrates repositories
+
+# Transactions
+- Handle transaction in service (not repository)
+
+# Validation
+- Validate before calling repository
+
+# Return
+- Use DTO or Result pattern
+- Do not return Entity directly
+
+# Flow
+1. Validate input
+2. Start transaction
+3. Call repository
+4. Commit / rollback

@@ -1,0 +1,17 @@
+---
+description: "Validation rules"
+alwaysApply: true
+---
+
+# Validation
+
+- Use FluentValidation
+- Validate all inputs before DB
+
+# Rules
+- Required fields
+- Length limits
+- Business constraints
+
+# Anti-pattern
+- ❌ Validate inside repository

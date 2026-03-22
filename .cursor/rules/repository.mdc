@@ -1,0 +1,28 @@
+---
+description: "Repository pattern rules"
+alwaysApply: true
+---
+
+# Repository Rules
+
+- All DB access must go through repository
+- Do NOT inject DbContext into Controller
+
+# Design
+- Use interface for each repository
+- Keep repository focused on data access only
+
+# Query
+- Return IQueryable only when necessary
+- Prefer returning DTO or projection
+
+# Example
+
+Good:
+return await _context.Users
+    .AsNoTracking()
+    .Select(x => new UserDto { Id = x.Id, Name = x.Name })
+    .ToListAsync();
+
+Bad:
+return await _context.Users.ToListAsync();
