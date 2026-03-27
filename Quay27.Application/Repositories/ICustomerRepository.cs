@@ -7,7 +7,7 @@ public interface ICustomerRepository
 {
     Task<Customer?> GetTrackedAsync(Guid id, CancellationToken cancellationToken = default);
     Task<CustomerDto?> GetProjectedByIdAsync(Guid id, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<CustomerDto>> ListBySheetDateAsync(DateOnly sheetDate, int? queueId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CustomerDto>> ListBySheetDateAsync(DateOnly? sheetDate, int? queueId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Guid>> GetActiveCustomerIdsWithSameNameAddressAsync(string nameAddress, CancellationToken cancellationToken = default);
     Task AddAsync(Customer customer, CancellationToken cancellationToken = default);
     Task<bool> SoftDeleteAsync(Guid id, string updatedBy, CancellationToken cancellationToken = default);

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Quay27.Application.Abstractions;
@@ -69,10 +70,72 @@ public class CustomerService : ICustomerService
         _logger = logger;
     }
 
-    public Task<IReadOnlyList<CustomerDto>> ListBySheetDateAsync(DateOnly sheetDate, int? queueId, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<CustomerDto>> ListBySheetDateAsync(DateOnly? sheetDate, int? queueId, CancellationToken cancellationToken = default)
     {
         EnsureAuthenticated();
         return _customers.ListBySheetDateAsync(sheetDate, queueId, cancellationToken);
+    }
+
+    public async Task<ImportCustomersExcelResult> ImportExcelAsync(
+        ImportCustomersExcelRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        if (request.FileBytes.Length == 0)
+            throw new InvalidOperationException("File import rỗng.");
+
+        var ext = Path.GetExtension(request.FileName ?? string.Empty);
+        if (!string.Equals(ext, ".xlsx", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Chỉ hỗ trợ file .xlsx.");
+
+        var rows = SimpleXlsxReader.ReadMappedRows(request.FileBytes);
+        var imported = 0;
+        var skipped = 0;
+        var failed = 0;
+        var errors = new List<string>();
+        var sortOrder = 1;
+
+        foreach (var row in rows)
+        {
+            if (string.IsNullOrWhiteSpace(row.InvoiceCode))
+            {
+                skipped++;
+                continue;
+            }
+
+            var billCreatedAt = ParseImportedDateTime(row.TimeRaw);
+            var createReq = new CreateCustomerRequest(
+                sortOrder++,
+                row.InvoiceCode.Trim(),
+                billCreatedAt,
+                row.CustomerRaw.Trim(),
+                row.CreatorRaw.Trim(),
+                string.Empty,
+                0,
+                string.Empty,
+                false,
+                false,
+                false,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                request.SheetDate,
+                "Mới");
+
+            try
+            {
+                await CreateAsync(createReq, cancellationToken);
+                imported++;
+            }
+            catch (Exception ex)
+            {
+                failed++;
+                if (errors.Count < 30)
+                    errors.Add($"Row {row.RowNumber}: {ex.Message}");
+            }
+        }
+
+        return new ImportCustomersExcelResult(rows.Count, imported, skipped, failed, errors);
     }
 
     public async Task<CustomerDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -612,6 +675,41 @@ public class CustomerService : ICustomerService
             ChangedBy = user,
             ChangedDate = when
         };
+
+    private static DateTime ParseImportedDateTime(string raw)
+    {
+        var text = raw.Trim();
+        if (string.IsNullOrWhiteSpace(text))
+            return DateTime.UtcNow;
+
+        if (double.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out var excelSerial))
+        {
+            try
+            {
+                return DateTime.SpecifyKind(DateTime.FromOADate(excelSerial), DateTimeKind.Utc);
+            }
+            catch
+            {
+                // fall through to string parsing
+            }
+        }
+
+        if (DateTime.TryParse(
+                text,
+                CultureInfo.GetCultureInfo("vi-VN"),
+                DateTimeStyles.AssumeLocal | DateTimeStyles.AllowWhiteSpaces,
+                out var vi))
+            return vi.ToUniversalTime();
+
+        if (DateTime.TryParse(
+                text,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal | DateTimeStyles.AllowWhiteSpaces,
+                out var inv))
+            return inv;
+
+        return DateTime.UtcNow;
+    }
 
     private sealed record CustomerSnapshot(
         int SortOrder,

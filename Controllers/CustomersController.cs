@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Quay27.Application.Abstractions;
 using Quay27.Application.Customers;
@@ -10,6 +11,12 @@ namespace Quay27_Be.Controllers;
 [Route("api/[controller]")]
 public class CustomersController : ControllerBase
 {
+    public sealed class ImportCustomersExcelForm
+    {
+        public IFormFile? File { get; set; }
+        public DateOnly SheetDate { get; set; }
+    }
+
     private readonly ICustomerService _customerService;
 
     public CustomersController(ICustomerService customerService)
@@ -20,7 +27,7 @@ public class CustomersController : ControllerBase
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<CustomerDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<CustomerDto>>> List(
-        [FromQuery] DateOnly sheetDate,
+        [FromQuery] DateOnly? sheetDate,
         [FromQuery] int? queueId,
         CancellationToken cancellationToken)
     {
@@ -55,6 +62,25 @@ public class CustomersController : ControllerBase
     {
         var created = await _customerService.CreateAsync(request, cancellationToken);
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
+    }
+
+    [HttpPost("import-excel")]
+    [ProducesResponseType(typeof(ImportCustomersExcelResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [RequestSizeLimit(20 * 1024 * 1024)]
+    public async Task<ActionResult<ImportCustomersExcelResult>> ImportExcel(
+        [FromForm] ImportCustomersExcelForm form,
+        CancellationToken cancellationToken)
+    {
+        if (form.File is null || form.File.Length == 0)
+            return BadRequest(new { title = "Invalid file", detail = "Vui lòng chọn file Excel hợp lệ." });
+
+        await using var ms = new MemoryStream();
+        await form.File.CopyToAsync(ms, cancellationToken);
+        var result = await _customerService.ImportExcelAsync(
+            new ImportCustomersExcelRequest(ms.ToArray(), form.File.FileName, form.SheetDate),
+            cancellationToken);
+        return Ok(result);
     }
 
     [HttpPatch("{id:guid}")]

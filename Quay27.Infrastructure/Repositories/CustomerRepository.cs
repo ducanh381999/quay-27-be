@@ -27,11 +27,14 @@ public class CustomerRepository : ICustomerRepository
         return row is null ? null : Map(row);
     }
 
-    public async Task<IReadOnlyList<CustomerDto>> ListBySheetDateAsync(DateOnly sheetDate, int? queueId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<CustomerDto>> ListBySheetDateAsync(DateOnly? sheetDate, int? queueId, CancellationToken cancellationToken = default)
     {
         var query = _db.Customers.AsNoTracking()
             .Include(c => c.CustomerQueues)
-            .Where(c => !c.IsDeleted && c.SheetDate == sheetDate);
+            .Where(c => !c.IsDeleted);
+
+        if (sheetDate is not null)
+            query = query.Where(c => c.SheetDate == sheetDate.Value);
 
         if (queueId is not null)
             query = query.Where(c => c.CustomerQueues.Any(cq => cq.QueueId == queueId));
