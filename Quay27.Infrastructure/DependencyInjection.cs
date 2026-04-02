@@ -32,7 +32,6 @@ public static class DependencyInjection
         services.AddScoped<IDuplicateFlagRepository, DuplicateFlagRepository>();
         services.AddScoped<ICustomerVersionRepository, CustomerVersionRepository>();
         services.AddScoped<IEndOfDayService, EndOfDayService>();
-        services.AddScoped<IDemoDataSeedService, DemoDataSeedService>();
 
         return services;
     }

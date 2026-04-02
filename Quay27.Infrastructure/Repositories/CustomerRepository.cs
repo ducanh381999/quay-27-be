@@ -39,11 +39,15 @@ public class CustomerRepository : ICustomerRepository
         if (queueId is not null)
             query = query.Where(c => c.CustomerQueues.Any(cq => cq.QueueId == queueId));
 
-        var rows = await query
-            .OrderBy(c => c.SortOrder)
-            .ThenBy(c => c.InvoiceCode)
-            .ThenBy(c => c.BillCreatedAt)
-            .ToListAsync(cancellationToken);
+        var rows = queueId is null
+            ? await query
+                .OrderBy(c => c.SortOrder)
+                .ThenBy(c => c.InvoiceCode)
+                .ThenBy(c => c.BillCreatedAt)
+                .ToListAsync(cancellationToken)
+            : await query
+                .OrderBy(c => c.CreatedDate)
+                .ToListAsync(cancellationToken);
         return rows.Select(Map).ToList();
     }
 

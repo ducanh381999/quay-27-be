@@ -1,0 +1,12 @@
+.git
+bin
+obj
+**/bin
+**/obj
+.vs
+.vscode
+Dockerfile
+docker-compose.yml
+*.user
+*.suo
+*.nupkg

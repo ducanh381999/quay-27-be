@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Quay27.Application.Abstractions;
@@ -18,10 +19,12 @@ public class CustomersController : ControllerBase
     }
 
     private readonly ICustomerService _customerService;
+    private readonly IWebHostEnvironment _environment;
 
-    public CustomersController(ICustomerService customerService)
+    public CustomersController(ICustomerService customerService, IWebHostEnvironment environment)
     {
         _customerService = customerService;
+        _environment = environment;
     }
 
     [HttpGet]
@@ -81,6 +84,23 @@ public class CustomersController : ControllerBase
             new ImportCustomersExcelRequest(ms.ToArray(), form.File.FileName, form.SheetDate),
             cancellationToken);
         return Ok(result);
+    }
+
+    [HttpGet("template-excel")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DownloadTemplateExcel(CancellationToken cancellationToken)
+    {
+        var templatePath = Path.Combine(_environment.ContentRootPath, "Templates", "DsHoaDon_Template.xlsx");
+        if (!System.IO.File.Exists(templatePath))
+            return NotFound(new { title = "Template not found", detail = "Không tìm thấy file template Excel trên server." });
+
+        var fileName = Path.GetFileName(templatePath);
+        var bytes = await System.IO.File.ReadAllBytesAsync(templatePath, cancellationToken);
+        return File(
+            bytes,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            fileName);
     }
 
     [HttpPatch("{id:guid}")]

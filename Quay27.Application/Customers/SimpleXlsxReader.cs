@@ -53,17 +53,15 @@ internal static class SimpleXlsxReader
         if (cellsByRow.Count == 0)
             return [];
 
-        var headerRowNumber = cellsByRow.Keys.Min();
-        var headerCells = cellsByRow[headerRowNumber];
-        var headerMap = BuildHeaderMap(headerCells);
+        const int headerRowNumber = 1;
+        if (!cellsByRow.TryGetValue(headerRowNumber, out var headerCells))
+            throw new InvalidOperationException("Dòng 1 phải là header hợp lệ.");
+        ValidateFixedHeaders(headerCells);
 
-        if (!headerMap.TryGetValue("ma hoa don", out var invoiceCol) ||
-            !headerMap.TryGetValue("thoi gian", out var timeCol) ||
-            !headerMap.TryGetValue("khach hang", out var customerCol) ||
-            !headerMap.TryGetValue("nguoi tao", out var creatorCol))
-        {
-            throw new InvalidOperationException("Thiếu cột bắt buộc: mã hóa đơn, thời gian, khách hàng, người tạo.");
-        }
+        const string invoiceCol = "A";
+        const string timeCol = "B";
+        const string customerCol = "C";
+        const string creatorCol = "D";
 
         var result = new List<ParsedRow>();
         foreach (var rowNo in cellsByRow.Keys.OrderBy(x => x))
@@ -147,16 +145,26 @@ internal static class SimpleXlsxReader
         return sb.ToString();
     }
 
-    private static Dictionary<string, string> BuildHeaderMap(Dictionary<string, string> headerCells)
+    private static void ValidateFixedHeaders(Dictionary<string, string> headerCells)
     {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var kv in headerCells)
+        var expected = new (string Col, string Header)[]
         {
-            var normalized = NormalizeHeader(kv.Value);
-            if (!string.IsNullOrWhiteSpace(normalized) && !map.ContainsKey(normalized))
-                map[normalized] = kv.Key;
+            ("A", "Mã hóa đơn"),
+            ("B", "Thời gian"),
+            ("C", "Khách hàng"),
+            ("D", "Người tạo"),
+            ("E", "Tổng tiền hàng"),
+        };
+
+        foreach (var item in expected)
+        {
+            var actual = GetCell(headerCells, item.Col);
+            if (!string.Equals(NormalizeHeader(actual), NormalizeHeader(item.Header), StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Header không hợp lệ tại cột {item.Col}. Mong đợi '{item.Header}'.");
+            }
         }
-        return map;
     }
 
     private static string GetCell(Dictionary<string, string> row, string col)
