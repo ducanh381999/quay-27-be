@@ -20,7 +20,19 @@ public static class DependencyInjection
         var serverVersion = new MySqlServerVersion(new Version(8, 0, 36));
 
         services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseMySql(connectionString, serverVersion));
+            options.UseMySql(
+                connectionString,
+                ServerVersion.AutoDetect(connectionString),
+                mysqlOptions =>
+                {
+                    mysqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 5,
+                        maxRetryDelay: TimeSpan.FromSeconds(10),
+                        errorNumbersToAdd: null
+                    );
+                }
+            )
+        );
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IUserRepository, UserRepository>();
