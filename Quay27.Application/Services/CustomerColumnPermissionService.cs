@@ -60,19 +60,11 @@ public class CustomerColumnPermissionService : ICustomerColumnPermissionService
 
         var rows = items.Select(i => new ColumnPermissionRow(i.ColumnName.Trim(), i.CanView, i.CanEdit)).ToList();
 
-        await _unitOfWork.BeginTransactionAsync(cancellationToken);
-        try
+        await _unitOfWork.ExecuteInTransactionAsync(async ct =>
         {
-            await _columnPermissions.ReplaceForUserAndTableAsync(userId, SchemaConstants.CustomersTable, rows,
-                cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            await _unitOfWork.CommitTransactionAsync(cancellationToken);
-        }
-        catch
-        {
-            await _unitOfWork.RollbackTransactionAsync(cancellationToken);
-            throw;
-        }
+            await _columnPermissions.ReplaceForUserAndTableAsync(userId, SchemaConstants.CustomersTable, rows, ct);
+            await _unitOfWork.SaveChangesAsync(ct);
+        }, cancellationToken);
     }
 
     private static void ValidateReplaceBody(IReadOnlyList<CustomerColumnPermissionInput> items, HashSet<string> allow)

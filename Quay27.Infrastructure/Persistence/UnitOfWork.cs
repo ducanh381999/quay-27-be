@@ -16,6 +16,18 @@ public class UnitOfWork : IUnitOfWork
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
         _db.SaveChangesAsync(cancellationToken);
 
+    public async Task ExecuteInTransactionAsync(Func<CancellationToken, Task> operation,
+        CancellationToken cancellationToken = default)
+    {
+        // Note:
+        // The project uses MySQL retry execution strategy, which doesn't support
+        // user-initiated transactions via BeginTransactionAsync()/CommitTransactionAsync().
+        //
+        // We avoid explicit user transactions here. Each SaveChangesAsync call
+        // will use EF's implicit transaction behavior when needed.
+        await operation(cancellationToken);
+    }
+
     public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
         _transaction = await _db.Database.BeginTransactionAsync(cancellationToken);

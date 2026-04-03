@@ -74,13 +74,12 @@ public class UserAdminService : IUserAdminService
         };
         user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
 
-        await _unitOfWork.BeginTransactionAsync(cancellationToken);
-        try
+        await _unitOfWork.ExecuteInTransactionAsync(async ct =>
         {
             _users.Add(user);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            await _users.SetRolesByNamesAsync(user.Id, roleNames, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _users.SetRolesByNamesAsync(user.Id, roleNames, ct);
+            await _unitOfWork.SaveChangesAsync(ct);
 
             if (ShouldSeedDefaultCustomerPermissions(roleNames))
             {
@@ -88,17 +87,10 @@ public class UserAdminService : IUserAdminService
                     .Select(n => new ColumnPermissionRow(n, CanView: true, CanEdit: false))
                     .ToList();
                 await _columnPermissions.ReplaceForUserAndTableAsync(user.Id, SchemaConstants.CustomersTable, defaults,
-                    cancellationToken);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    ct);
+                await _unitOfWork.SaveChangesAsync(ct);
             }
-
-            await _unitOfWork.CommitTransactionAsync(cancellationToken);
-        }
-        catch
-        {
-            await _unitOfWork.RollbackTransactionAsync(cancellationToken);
-            throw;
-        }
+        }, cancellationToken);
 
         var created = await _users.GetByIdAsync(user.Id, cancellationToken);
         return MapUser(created!);
