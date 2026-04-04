@@ -128,7 +128,8 @@ public class CustomerService : ICustomerService
 
             try
             {
-                await CreateAsync(createReq, cancellationToken);
+                // Khi import, chỉ tạo 1 audit log cho mỗi bản ghi
+                await CreateInternalAsync(createReq, fromImport: true, cancellationToken);
                 imported++;
             }
             catch (Exception ex)
@@ -160,6 +161,12 @@ public class CustomerService : ICustomerService
     }
 
     public async Task<CustomerDto> CreateAsync(CreateCustomerRequest request, CancellationToken cancellationToken = default)
+        => await CreateInternalAsync(request, fromImport: false, cancellationToken);
+
+    private async Task<CustomerDto> CreateInternalAsync(
+        CreateCustomerRequest request,
+        bool fromImport,
+        CancellationToken cancellationToken)
     {
         EnsureAuthenticated();
         var userId = _currentUser.UserId!.Value;
@@ -169,9 +176,10 @@ public class CustomerService : ICustomerService
 
         var dto = await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            var id = Guid.NewGuid();
-            var now = DateTime.UtcNow;
-            var entity = new Customer
+            id = Guid.NewGuid();
+            now = DateTime.UtcNow;
+
+            entity = new Customer
             {
                 Id = id,
                 SortOrder = request.SortOrder,
@@ -199,10 +207,33 @@ public class CustomerService : ICustomerService
                 IsDeleted = false
             };
 
-            await _customers.AddAsync(entity, cancellationToken);
+            await _customers.AddAsync(entity, tx);
 
-            var audits = BuildInsertAudits(id, entity, username, now);
-            await _auditLogs.AddRangeAsync(audits, cancellationToken);
+            if (fromImport)
+            {
+                // Import: chỉ log 1 bản ghi audit cho toàn bộ customer
+                await _auditLogs.AddRangeAsync(new[]
+                {
+                    new AuditLog
+                    {
+                        Id = Guid.NewGuid(),
+                        TableName = SchemaConstants.CustomersTable,
+                        RecordId = id,
+                        ColumnName = "Import",
+                        OldValue = null,
+                        NewValue = "Imported",
+                        ActionType = "Import",
+                        ChangedBy = username,
+                        ChangedDate = now
+                    }
+                }, tx);
+            }
+            else
+            {
+                // Tạo bình thường: log chi tiết theo từng cột
+                var audits = BuildInsertAudits(id, entity, username, now);
+                await _auditLogs.AddRangeAsync(audits, tx);
+            }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await RecomputeDuplicatesForNameAddressAsync(entity.NameAddress, cancellationToken);
@@ -232,7 +263,7 @@ public class CustomerService : ICustomerService
             if (entity is null)
                 throw new NotFoundException("Customer not found.");
 
-            var sheetDateBefore = entity.SheetDate;
+            sheetDateBefore = entity.SheetDate;
             var oldNameAddress = entity.NameAddress;
             var snapshot = JsonSerializer.Serialize(CustomerSnapshot.FromEntity(entity));
             await _customerVersions.AddAsync(new CustomerVersion
@@ -244,7 +275,7 @@ public class CustomerService : ICustomerService
                 CreatedDate = DateTime.UtcNow
             }, cancellationToken);
 
-            var audits = new List<AuditLog>();
+            audits = new List<AuditLog>();
             var now = DateTime.UtcNow;
 
             if (request.SortOrder is not null)
