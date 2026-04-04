@@ -110,9 +110,9 @@ public class UserAdminService : IUserAdminService
         await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
             _users.Add(user);
-            await _unitOfWork.SaveChangesAsync(ct);
-            await _users.SetRolesByNamesAsync(user.Id, roleNames, ct);
-            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _users.SetRolesByNamesAsync(user.Id, roleNames, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             if (ShouldSeedDefaultCustomerPermissions(roleNames))
             {

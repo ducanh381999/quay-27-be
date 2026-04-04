@@ -176,10 +176,10 @@ public class CustomerService : ICustomerService
 
         var dto = await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            id = Guid.NewGuid();
-            now = DateTime.UtcNow;
+            var id = Guid.NewGuid();
+            var now = DateTime.UtcNow;
 
-            entity = new Customer
+            var entity = new Customer
             {
                 Id = id,
                 SortOrder = request.SortOrder,
@@ -207,11 +207,10 @@ public class CustomerService : ICustomerService
                 IsDeleted = false
             };
 
-            await _customers.AddAsync(entity, tx);
+            await _customers.AddAsync(entity, cancellationToken);
 
             if (fromImport)
             {
-                // Import: chỉ log 1 bản ghi audit cho toàn bộ customer
                 await _auditLogs.AddRangeAsync(new[]
                 {
                     new AuditLog
@@ -226,13 +225,12 @@ public class CustomerService : ICustomerService
                         ChangedBy = username,
                         ChangedDate = now
                     }
-                }, tx);
+                }, cancellationToken);
             }
             else
             {
-                // Tạo bình thường: log chi tiết theo từng cột
                 var audits = BuildInsertAudits(id, entity, username, now);
-                await _auditLogs.AddRangeAsync(audits, tx);
+                await _auditLogs.AddRangeAsync(audits, cancellationToken);
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -263,7 +261,7 @@ public class CustomerService : ICustomerService
             if (entity is null)
                 throw new NotFoundException("Customer not found.");
 
-            sheetDateBefore = entity.SheetDate;
+            var sheetDateBefore = entity.SheetDate;
             var oldNameAddress = entity.NameAddress;
             var snapshot = JsonSerializer.Serialize(CustomerSnapshot.FromEntity(entity));
             await _customerVersions.AddAsync(new CustomerVersion
@@ -275,7 +273,7 @@ public class CustomerService : ICustomerService
                 CreatedDate = DateTime.UtcNow
             }, cancellationToken);
 
-            audits = new List<AuditLog>();
+            var audits = new List<AuditLog>();
             var now = DateTime.UtcNow;
 
             if (request.SortOrder is not null)
