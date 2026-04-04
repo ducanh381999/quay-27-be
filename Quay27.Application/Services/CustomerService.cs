@@ -25,6 +25,7 @@ public class CustomerService : ICustomerService
         SchemaConstants.CustomerColumns.ManagerApproved,
         SchemaConstants.CustomerColumns.Kio27Received,
         SchemaConstants.CustomerColumns.Export27,
+        SchemaConstants.CustomerColumns.FullSelfExport,
         SchemaConstants.CustomerColumns.Notes,
         SchemaConstants.CustomerColumns.GoodsSenderNote,
         SchemaConstants.CustomerColumns.AdditionalNotes,
@@ -33,6 +34,7 @@ public class CustomerService : ICustomerService
     };
 
     private readonly ICustomerRepository _customers;
+    private readonly IUserRepository _users;
     private readonly ICustomerQueueRepository _customerQueues;
     private readonly IQueueRepository _queues;
     private readonly IColumnPermissionRepository _columnPermissions;
@@ -46,6 +48,7 @@ public class CustomerService : ICustomerService
 
     public CustomerService(
         ICustomerRepository customers,
+        IUserRepository users,
         ICustomerQueueRepository customerQueues,
         IQueueRepository queues,
         IColumnPermissionRepository columnPermissions,
@@ -58,6 +61,7 @@ public class CustomerService : ICustomerService
         ILogger<CustomerService> logger)
     {
         _customers = customers;
+        _users = users;
         _customerQueues = customerQueues;
         _queues = queues;
         _columnPermissions = columnPermissions;
@@ -163,8 +167,7 @@ public class CustomerService : ICustomerService
 
         await EnsureCanEditColumnsAsync(userId, AllCustomerColumns, cancellationToken);
 
-        await _unitOfWork.BeginTransactionAsync(cancellationToken);
-        try
+        var dto = await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
             var id = Guid.NewGuid();
             var now = DateTime.UtcNow;
@@ -184,6 +187,7 @@ public class CustomerService : ICustomerService
                 ManagerApproved = request.ManagerApproved,
                 Kio27Received = request.Kio27Received,
                 Export27 = request.Export27,
+                FullSelfExport = request.FullSelfExport,
                 Notes = request.Notes.Trim(),
                 GoodsSenderNote = request.GoodsSenderNote.Trim(),
                 AdditionalNotes = request.AdditionalNotes.Trim(),
@@ -203,20 +207,16 @@ public class CustomerService : ICustomerService
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await RecomputeDuplicatesForNameAddressAsync(entity.NameAddress, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            await _unitOfWork.CommitTransactionAsync(cancellationToken);
-
-            _logger.LogInformation("Customer {CustomerId} created by {User}", id, username);
-
-            await _realtime.NotifyAsync(
-                new CustomerSheetChangeNotification(entity.SheetDate, id, "created"), cancellationToken);
 
             return (await _customers.GetProjectedByIdAsync(id, cancellationToken))!;
-        }
-        catch
-        {
-            await _unitOfWork.RollbackTransactionAsync(cancellationToken);
-            throw;
-        }
+        }, cancellationToken);
+
+        _logger.LogInformation("Customer {CustomerId} created by {User}", dto.Id, username);
+
+        await _realtime.NotifyAsync(
+            new CustomerSheetChangeNotification(dto.SheetDate, dto.Id, "created"), cancellationToken);
+
+        return dto;
     }
 
     public async Task<CustomerDto> UpdateAsync(Guid id, UpdateCustomerRequest request, CancellationToken cancellationToken = default)
@@ -225,9 +225,9 @@ public class CustomerService : ICustomerService
         var userId = _currentUser.UserId!.Value;
         var username = _currentUser.Username;
 
-        await _unitOfWork.BeginTransactionAsync(cancellationToken);
-        try
-        {
+        var (resultDto, auditCount, sheetDateBeforeSnap, sheetDateAfter) =
+            await _unitOfWork.ExecuteInTransactionAsync(async () =>
+            {
             var entity = await _customers.GetTrackedAsync(id, cancellationToken);
             if (entity is null)
                 throw new NotFoundException("Customer not found.");
@@ -369,6 +369,17 @@ public class CustomerService : ICustomerService
                 }
             }
 
+            if (request.FullSelfExport is not null)
+            {
+                await EnsureCanEditColumnAsync(userId, SchemaConstants.CustomerColumns.FullSelfExport, cancellationToken);
+                var v = request.FullSelfExport.Value;
+                if (v != entity.FullSelfExport)
+                {
+                    audits.Add(CreateAudit(SchemaConstants.CustomersTable, id, SchemaConstants.CustomerColumns.FullSelfExport, entity.FullSelfExport.ToString(), v.ToString(), "Update", username, now));
+                    entity.FullSelfExport = v;
+                }
+            }
+
             if (request.Notes is not null)
             {
                 await EnsureCanEditColumnAsync(userId, SchemaConstants.CustomerColumns.Notes, cancellationToken);
@@ -424,6 +435,8 @@ public class CustomerService : ICustomerService
                 }
             }
 
+            await ApplyCancelledInvoiceNormalizationAsync(id, entity, username, now, audits, cancellationToken);
+
             if (audits.Count > 0)
             {
                 entity.UpdatedBy = username;
@@ -438,45 +451,52 @@ public class CustomerService : ICustomerService
 
             await RecomputeDuplicatesForNameAddressAsync(entity.NameAddress, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
-            _logger.LogInformation("Customer {CustomerId} updated by {User}", id, username);
+            var dto = (await _customers.GetProjectedByIdAsync(id, cancellationToken))!;
+            return (dto, audits.Count, sheetDateBefore, entity.SheetDate);
+        }, cancellationToken);
 
-            if (audits.Count > 0)
+        _logger.LogInformation("Customer {CustomerId} updated by {User}", id, username);
+
+        if (auditCount > 0)
+        {
+            await _realtime.NotifyAsync(
+                new CustomerSheetChangeNotification(sheetDateAfter, id, "updated"), cancellationToken);
+            if (sheetDateBeforeSnap != sheetDateAfter)
             {
                 await _realtime.NotifyAsync(
-                    new CustomerSheetChangeNotification(entity.SheetDate, id, "updated"), cancellationToken);
-                if (sheetDateBefore != entity.SheetDate)
-                {
-                    await _realtime.NotifyAsync(
-                        new CustomerSheetChangeNotification(sheetDateBefore, id, "updated"), cancellationToken);
-                }
+                    new CustomerSheetChangeNotification(sheetDateBeforeSnap, id, "updated"), cancellationToken);
             }
+        }
 
-            return (await _customers.GetProjectedByIdAsync(id, cancellationToken))!;
-        }
-        catch
-        {
-            await _unitOfWork.RollbackTransactionAsync(cancellationToken);
-            throw;
-        }
+        return resultDto;
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         EnsureAuthenticated();
         if (!_currentUser.IsAdmin)
-            throw new ForbiddenException("Only administrators can delete customers.");
+        {
+            if (_currentUser.UserId is null)
+                throw new ForbiddenException("You are not allowed to delete customers.");
+            var actor = await _users.GetByIdAsync(_currentUser.UserId.Value, cancellationToken);
+            if (actor is null || !actor.CanDeleteCustomers)
+                throw new ForbiddenException("You are not allowed to delete customers.");
+        }
 
         var username = _currentUser.Username;
-        await _unitOfWork.BeginTransactionAsync(cancellationToken);
-        try
+        var sheetDate = await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
             var entity = await _customers.GetTrackedAsync(id, cancellationToken);
             if (entity is null)
                 throw new NotFoundException("Customer not found.");
 
-            var sheetDate = entity.SheetDate;
+            var inQuay27 =
+                await _customerQueues.FindAsync(id, SchemaConstants.Quay27QueueId, cancellationToken);
+            if (inQuay27 is not null)
+                throw new ConflictException("Cannot delete a customer already on Quầy 27.");
+
+            var sd = entity.SheetDate;
             var nameAddress = entity.NameAddress;
             var ok = await _customers.SoftDeleteAsync(id, username, cancellationToken);
             if (!ok)
@@ -491,18 +511,14 @@ public class CustomerService : ICustomerService
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await RecomputeDuplicatesForNameAddressAsync(nameAddress, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
-            _logger.LogInformation("Customer {CustomerId} soft-deleted by {User}", id, username);
+            return sd;
+        }, cancellationToken);
 
-            await _realtime.NotifyAsync(
-                new CustomerSheetChangeNotification(sheetDate, id, "deleted"), cancellationToken);
-        }
-        catch
-        {
-            await _unitOfWork.RollbackTransactionAsync(cancellationToken);
-            throw;
-        }
+        _logger.LogInformation("Customer {CustomerId} soft-deleted by {User}", id, username);
+
+        await _realtime.NotifyAsync(
+            new CustomerSheetChangeNotification(sheetDate, id, "deleted"), cancellationToken);
     }
 
     public async Task SetQueueAsync(Guid customerId, int queueId, SetCustomerQueueRequest request, CancellationToken cancellationToken = default)
@@ -517,10 +533,9 @@ public class CustomerService : ICustomerService
         if (!await _queues.ExistsAsync(queueId, cancellationToken))
             throw new NotFoundException("Queue not found.");
 
-        var queueChanged = false;
-        await _unitOfWork.BeginTransactionAsync(cancellationToken);
-        try
+        var queueChanged = await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
+            var changed = false;
             var link = await _customerQueues.FindAsync(customerId, queueId, cancellationToken);
             var now = DateTime.UtcNow;
 
@@ -528,7 +543,7 @@ public class CustomerService : ICustomerService
             {
                 if (link is null)
                 {
-                    queueChanged = true;
+                    changed = true;
                     await _customerQueues.AddAsync(new CustomerQueue
                     {
                         Id = Guid.NewGuid(),
@@ -559,7 +574,7 @@ public class CustomerService : ICustomerService
             {
                 if (link is not null)
                 {
-                    queueChanged = true;
+                    changed = true;
                     _customerQueues.Remove(link);
                     await _auditLogs.AddRangeAsync(new[]
                     {
@@ -580,19 +595,49 @@ public class CustomerService : ICustomerService
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            await _unitOfWork.CommitTransactionAsync(cancellationToken);
-        }
-        catch
-        {
-            await _unitOfWork.RollbackTransactionAsync(cancellationToken);
-            throw;
-        }
+            return changed;
+        }, cancellationToken);
 
         if (queueChanged)
         {
             await _realtime.NotifyAsync(
                 new CustomerSheetChangeNotification(customer.SheetDate, customerId, "queue"), cancellationToken);
         }
+    }
+
+    private static bool IsCancelledInvoiceNotes(string? notes) =>
+        string.Equals(notes?.Trim(), SchemaConstants.CancelledInvoiceNotes, StringComparison.Ordinal);
+
+    private async Task ApplyCancelledInvoiceNormalizationAsync(Guid id, Customer entity, string username,
+        DateTime now, List<AuditLog> audits, CancellationToken cancellationToken)
+    {
+        if (!IsCancelledInvoiceNotes(entity.Notes))
+            return;
+
+        if (entity.FullSelfExport)
+        {
+            audits.Add(CreateAudit(SchemaConstants.CustomersTable, id, SchemaConstants.CustomerColumns.FullSelfExport,
+                bool.TrueString, bool.FalseString, "Update", username, now));
+            entity.FullSelfExport = false;
+        }
+
+        var q27 = await _customerQueues.FindAsync(id, SchemaConstants.Quay27QueueId, cancellationToken);
+        if (q27 is null)
+            return;
+
+        _customerQueues.Remove(q27);
+        audits.Add(new AuditLog
+        {
+            Id = Guid.NewGuid(),
+            TableName = "CustomerQueues",
+            RecordId = id,
+            ColumnName = "QueueId",
+            OldValue = SchemaConstants.Quay27QueueId.ToString(),
+            NewValue = null,
+            ActionType = "Remove",
+            ChangedBy = username,
+            ChangedDate = now
+        });
     }
 
     private static List<AuditLog> BuildInsertAudits(Guid id, Customer e, string username, DateTime now)
@@ -612,6 +657,7 @@ public class CustomerService : ICustomerService
         Add(SchemaConstants.CustomerColumns.ManagerApproved, e.ManagerApproved.ToString(), audits);
         Add(SchemaConstants.CustomerColumns.Kio27Received, e.Kio27Received.ToString(), audits);
         Add(SchemaConstants.CustomerColumns.Export27, e.Export27.ToString(), audits);
+        Add(SchemaConstants.CustomerColumns.FullSelfExport, e.FullSelfExport.ToString(), audits);
         Add(SchemaConstants.CustomerColumns.Notes, e.Notes, audits);
         Add(SchemaConstants.CustomerColumns.GoodsSenderNote, e.GoodsSenderNote, audits);
         Add(SchemaConstants.CustomerColumns.AdditionalNotes, e.AdditionalNotes, audits);
@@ -723,6 +769,7 @@ public class CustomerService : ICustomerService
         bool ManagerApproved,
         bool Kio27Received,
         bool Export27,
+        bool FullSelfExport,
         string Notes,
         string GoodsSenderNote,
         string AdditionalNotes,
@@ -742,6 +789,7 @@ public class CustomerService : ICustomerService
                 c.ManagerApproved,
                 c.Kio27Received,
                 c.Export27,
+                c.FullSelfExport,
                 c.Notes,
                 c.GoodsSenderNote,
                 c.AdditionalNotes,

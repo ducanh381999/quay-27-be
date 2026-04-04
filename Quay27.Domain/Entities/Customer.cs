@@ -27,6 +27,9 @@ public class Customer
     public bool Kio27Received { get; set; }
     public bool Export27 { get; set; }
 
+    /// <summary>Full sheet — tự xuất; khi true thì job cuối ngày không tăng SheetDate.</summary>
+    public bool FullSelfExport { get; set; }
+
     /// <summary>Ghi chú</summary>
     public string Notes { get; set; } = string.Empty;
 

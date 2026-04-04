@@ -116,7 +116,7 @@ public class CustomersController : ControllerBase
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         await _customerService.DeleteAsync(id, cancellationToken);
-        return NoContent();
+        return Ok();
     }
 
     [HttpPut("{id:guid}/queues/{queueId:int}")]
@@ -126,6 +126,6 @@ public class CustomersController : ControllerBase
         if (request is null)
             return BadRequest();
         await _customerService.SetQueueAsync(id, queueId, request, cancellationToken);
-        return NoContent();
+        return Ok();
     }
 }

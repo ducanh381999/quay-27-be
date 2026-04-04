@@ -12,6 +12,7 @@ public record UpdateCustomerRequest(
     bool? ManagerApproved,
     bool? Kio27Received,
     bool? Export27,
+    bool? FullSelfExport,
     string? Notes,
     string? GoodsSenderNote,
     string? AdditionalNotes,

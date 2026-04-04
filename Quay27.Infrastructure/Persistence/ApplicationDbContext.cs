@@ -20,6 +20,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<CustomerVersion> CustomerVersions => Set<CustomerVersion>();
     public DbSet<DuplicateFlag> DuplicateFlags => Set<DuplicateFlag>();
+    public DbSet<SheetPickerMember> SheetPickerMembers => Set<SheetPickerMember>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -115,6 +116,13 @@ public class ApplicationDbContext : DbContext
             e.HasKey(x => x.Id);
             e.HasIndex(x => x.DuplicateGroupId);
             e.HasOne(x => x.Customer).WithMany(c => c.DuplicateFlags).HasForeignKey(x => x.CustomerId);
+        });
+
+        modelBuilder.Entity<SheetPickerMember>(e =>
+        {
+            e.ToTable("SheetPickerMembers");
+            e.HasKey(x => x.UserId);
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

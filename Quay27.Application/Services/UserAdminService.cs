@@ -16,28 +16,61 @@ public class UserAdminService : IUserAdminService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IColumnPermissionRepository _columnPermissions;
+    private readonly ISheetPickerMemberRepository _sheetPickerMembers;
 
     public UserAdminService(
         IUserRepository users,
         IUnitOfWork unitOfWork,
         IPasswordHasher<User> passwordHasher,
-        IColumnPermissionRepository columnPermissions)
+        IColumnPermissionRepository columnPermissions,
+        ISheetPickerMemberRepository sheetPickerMembers)
     {
         _users = users;
         _unitOfWork = unitOfWork;
         _passwordHasher = passwordHasher;
         _columnPermissions = columnPermissions;
+        _sheetPickerMembers = sheetPickerMembers;
     }
 
     public async Task<IReadOnlyList<UserPickerDto>> ListForSheetPickersAsync(
         CancellationToken cancellationToken = default)
     {
         var list = await _users.ListWithRolesAsync(cancellationToken);
+        var memberIds = (await _sheetPickerMembers.ListUserIdsAsync(cancellationToken)).ToHashSet();
+
         return list
-            .Where(u => u.IsActive)
+            .Where(u => u.IsActive && (UserHasAdminRole(u) || memberIds.Contains(u.Id)))
             .OrderBy(u => u.FullName, StringComparer.OrdinalIgnoreCase)
             .Select(u => new UserPickerDto { Username = u.Username, FullName = u.FullName })
             .ToList();
+    }
+
+    public Task<IReadOnlyList<Guid>> ListSheetPickerMemberIdsAsync(CancellationToken cancellationToken = default) =>
+        _sheetPickerMembers.ListUserIdsAsync(cancellationToken);
+
+    public async Task ReplaceSheetPickerMembersAsync(IReadOnlyList<Guid> userIds,
+        CancellationToken cancellationToken = default)
+    {
+        var distinct = userIds.Distinct().ToList();
+        foreach (var uid in distinct)
+        {
+            var u = await _users.GetByIdAsync(uid, cancellationToken);
+            if (u is null)
+                throw new NotFoundException("One or more users were not found.");
+            if (!u.IsActive)
+                throw new ValidationException(new[]
+                {
+                    new ValidationFailure("userIds", $"User '{u.Username}' is inactive.")
+                });
+        }
+
+        await _unitOfWork.ExecuteInTransactionAsync(async () =>
+        {
+            await _sheetPickerMembers.ClearAsync(cancellationToken);
+            foreach (var uid in distinct)
+                _sheetPickerMembers.Add(uid);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }, cancellationToken);
     }
 
     public async Task<IReadOnlyList<UserSummaryDto>> ListAsync(CancellationToken cancellationToken = default)
@@ -74,8 +107,7 @@ public class UserAdminService : IUserAdminService
         };
         user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
 
-        await _unitOfWork.BeginTransactionAsync(cancellationToken);
-        try
+        await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
             _users.Add(user);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -91,14 +123,7 @@ public class UserAdminService : IUserAdminService
                     cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
             }
-
-            await _unitOfWork.CommitTransactionAsync(cancellationToken);
-        }
-        catch
-        {
-            await _unitOfWork.RollbackTransactionAsync(cancellationToken);
-            throw;
-        }
+        }, cancellationToken);
 
         var created = await _users.GetByIdAsync(user.Id, cancellationToken);
         return MapUser(created!);
@@ -123,6 +148,9 @@ public class UserAdminService : IUserAdminService
 
         if (request.IsActive.HasValue)
             user.IsActive = request.IsActive.Value;
+
+        if (request.CanDeleteCustomers.HasValue)
+            user.CanDeleteCustomers = request.CanDeleteCustomers.Value;
 
         if (request.RoleNames is not null)
         {
@@ -162,9 +190,14 @@ public class UserAdminService : IUserAdminService
             Username = u.Username,
             FullName = u.FullName,
             IsActive = u.IsActive,
+            CanDeleteCustomers = u.CanDeleteCustomers,
             Roles = roles
         };
     }
+
+    private static bool UserHasAdminRole(User u) =>
+        u.UserRoles.Any(ur =>
+            string.Equals(ur.Role?.Name, SchemaConstants.Roles.Admin, StringComparison.Ordinal));
 
     private static List<string> NormalizeRoleNames(IReadOnlyList<string> roleNames) =>
         roleNames.Select(r => r.Trim()).Where(r => r.Length > 0).Distinct(StringComparer.Ordinal).ToList();

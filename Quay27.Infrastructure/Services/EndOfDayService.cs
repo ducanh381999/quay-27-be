@@ -19,19 +19,21 @@ public class EndOfDayService : IEndOfDayService
 
     public async Task<int> RollUnqueuedCustomersToNextDayAsync(CancellationToken cancellationToken = default)
     {
-        await _unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
-            var moved = await _customers.AdvanceSheetDateForUnqueuedActiveCustomersAsync(cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            await _unitOfWork.CommitTransactionAsync(cancellationToken);
+            var moved = await _unitOfWork.ExecuteInTransactionAsync(async () =>
+            {
+                var n = await _customers.AdvanceSheetDateForUnqueuedActiveCustomersAsync(cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return n;
+            }, cancellationToken);
+
             if (moved > 0)
                 _logger.LogInformation("End of day job moved {Count} customers to next sheet date.", moved);
             return moved;
         }
         catch (Exception ex)
         {
-            await _unitOfWork.RollbackTransactionAsync(cancellationToken);
             _logger.LogError(ex, "End of day job failed.");
             throw;
         }

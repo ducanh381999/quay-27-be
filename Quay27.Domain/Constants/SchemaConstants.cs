@@ -20,6 +20,7 @@ public static class SchemaConstants
         public const string ManagerApproved = nameof(Customer.ManagerApproved);
         public const string Kio27Received = nameof(Customer.Kio27Received);
         public const string Export27 = nameof(Customer.Export27);
+        public const string FullSelfExport = nameof(Customer.FullSelfExport);
         public const string Notes = nameof(Customer.Notes);
         public const string GoodsSenderNote = nameof(Customer.GoodsSenderNote);
         public const string AdditionalNotes = nameof(Customer.AdditionalNotes);
@@ -35,6 +36,9 @@ public static class SchemaConstants
 
     /// <summary>Queue id seeded for &quot;Quầy 27&quot; — tick CẤP 27 in full sheet enrolls here.</summary>
     public const int Quay27QueueId = 1;
+
+    /// <summary>Giá trị <see cref="Customer.Notes"/> khi hóa đơn hủy — đồng bộ BE/FE.</summary>
+    public const string CancelledInvoiceNotes = "Hủy hóa đơn";
 
     /// <summary>Allowlisted <see cref="Customer"/> property names for <see cref="CustomersTable"/> column permissions.</summary>
     public static IReadOnlyList<string> GetAllCustomerColumnNames() =>

@@ -16,4 +16,5 @@ public record CreateCustomerRequest(
     string GoodsSenderNote,
     string AdditionalNotes,
     DateOnly SheetDate,
-    string Status);
+    string Status,
+    bool FullSelfExport = false);

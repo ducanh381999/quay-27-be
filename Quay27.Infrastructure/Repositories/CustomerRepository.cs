@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Quay27.Application.Customers;
 using Quay27.Application.Repositories;
+using Quay27.Domain.Constants;
 using Quay27.Domain.Entities;
 using Quay27.Infrastructure.Persistence;
 
@@ -87,7 +88,11 @@ public class CustomerRepository : ICustomerRepository
     public async Task<int> AdvanceSheetDateForUnqueuedActiveCustomersAsync(CancellationToken cancellationToken = default)
     {
         var list = await _db.Customers
-            .Where(c => !c.IsDeleted && !c.CustomerQueues.Any())
+            .Where(c => !c.IsDeleted
+                && !c.CustomerQueues.Any()
+                && !c.Export27
+                && !c.FullSelfExport
+                && c.Notes != SchemaConstants.CancelledInvoiceNotes)
             .ToListAsync(cancellationToken);
         foreach (var c in list)
             c.SheetDate = c.SheetDate.AddDays(1);
@@ -108,6 +113,7 @@ public class CustomerRepository : ICustomerRepository
             c.ManagerApproved,
             c.Kio27Received,
             c.Export27,
+            c.FullSelfExport,
             c.Notes,
             c.GoodsSenderNote,
             c.AdditionalNotes,

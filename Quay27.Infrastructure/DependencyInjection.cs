@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<ICustomerQueueRepository, CustomerQueueRepository>();
         services.AddScoped<IDuplicateFlagRepository, DuplicateFlagRepository>();
         services.AddScoped<ICustomerVersionRepository, CustomerVersionRepository>();
+        services.AddScoped<ISheetPickerMemberRepository, SheetPickerMemberRepository>();
         services.AddScoped<IEndOfDayService, EndOfDayService>();
 
         return services;

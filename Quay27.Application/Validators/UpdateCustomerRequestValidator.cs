@@ -33,6 +33,7 @@ public class UpdateCustomerRequestValidator : AbstractValidator<UpdateCustomerRe
         || r.ManagerApproved is not null
         || r.Kio27Received is not null
         || r.Export27 is not null
+        || r.FullSelfExport is not null
         || r.Notes is not null
         || r.GoodsSenderNote is not null
         || r.AdditionalNotes is not null

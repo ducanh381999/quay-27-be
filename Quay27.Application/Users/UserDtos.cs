@@ -13,6 +13,7 @@ public sealed class UserSummaryDto
     public string Username { get; init; } = string.Empty;
     public string FullName { get; init; } = string.Empty;
     public bool IsActive { get; init; }
+    public bool CanDeleteCustomers { get; init; }
     public IReadOnlyList<string> Roles { get; init; } = Array.Empty<string>();
 }
 
@@ -30,7 +31,13 @@ public sealed class PatchUserRequest
     public string? Username { get; set; }
     public string? FullName { get; set; }
     public bool? IsActive { get; set; }
+    public bool? CanDeleteCustomers { get; set; }
     public IReadOnlyList<string>? RoleNames { get; set; }
+}
+
+public sealed class SheetPickerMembersPutRequest
+{
+    public IReadOnlyList<Guid> UserIds { get; set; } = Array.Empty<Guid>();
 }
 
 public sealed class ResetUserPasswordRequest

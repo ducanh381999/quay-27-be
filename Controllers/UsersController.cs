@@ -28,6 +28,25 @@ public class UsersController : ControllerBase
         return Ok(items);
     }
 
+    [HttpGet("sheet-picker-members")]
+    [Authorize(Roles = SchemaConstants.Roles.Admin)]
+    [ProducesResponseType(typeof(IReadOnlyList<Guid>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<Guid>>> SheetPickerMembers(CancellationToken cancellationToken)
+    {
+        var ids = await _userAdmin.ListSheetPickerMemberIdsAsync(cancellationToken);
+        return Ok(ids);
+    }
+
+    [HttpPut("sheet-picker-members")]
+    [Authorize(Roles = SchemaConstants.Roles.Admin)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> PutSheetPickerMembers([FromBody] SheetPickerMembersPutRequest? body,
+        CancellationToken cancellationToken)
+    {
+        await _userAdmin.ReplaceSheetPickerMembersAsync(body?.UserIds ?? Array.Empty<Guid>(), cancellationToken);
+        return Ok();
+    }
+
     [HttpGet]
     [Authorize(Roles = SchemaConstants.Roles.Admin)]
     [ProducesResponseType(typeof(IReadOnlyList<UserSummaryDto>), StatusCodes.Status200OK)]
@@ -76,7 +95,7 @@ public class UsersController : ControllerBase
         CancellationToken cancellationToken)
     {
         await _userAdmin.ResetPasswordAsync(id, request, cancellationToken);
-        return NoContent();
+        return Ok();
     }
 
     [HttpGet("{id:guid}/column-permissions")]
@@ -98,6 +117,6 @@ public class UsersController : ControllerBase
         [FromBody] IReadOnlyList<CustomerColumnPermissionInput> body, CancellationToken cancellationToken)
     {
         await _columnPermissions.ReplaceForUserAsync(id, body, cancellationToken);
-        return NoContent();
+        return Ok();
     }
 }
