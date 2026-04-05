@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Quay27.Application.Abstractions;
+using Quay27.Application.Common;
 using Quay27.Application.Common.Exceptions;
 using Quay27.Application.Customers;
 using Quay27.Application.Repositories;
@@ -74,10 +75,17 @@ public class CustomerService : ICustomerService
         _logger = logger;
     }
 
-    public Task<IReadOnlyList<CustomerDto>> ListBySheetDateAsync(DateOnly? sheetDate, int? queueId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<CustomerDto>> ListBySheetDateAsync(DateOnly? sheetDate, int? queueId, CancellationToken cancellationToken = default)
     {
         EnsureAuthenticated();
-        return _customers.ListBySheetDateAsync(sheetDate, queueId, cancellationToken);
+        if (queueId is null && sheetDate is { } sd)
+        {
+            var todayVn = VietnamDate.TodayInVietnam();
+            if (sd == todayVn)
+                return await _customers.ListTodayFullSheetWithCarryoverAsync(sd, cancellationToken);
+        }
+
+        return await _customers.ListBySheetDateAsync(sheetDate, queueId, cancellationToken);
     }
 
     public async Task<ImportCustomersExcelResult> ImportExcelAsync(

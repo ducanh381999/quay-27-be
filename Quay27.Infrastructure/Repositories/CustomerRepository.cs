@@ -52,6 +52,31 @@ public class CustomerRepository : ICustomerRepository
         return rows.Select(Map).ToList();
     }
 
+    public async Task<IReadOnlyList<CustomerDto>> ListTodayFullSheetWithCarryoverAsync(DateOnly today,
+        CancellationToken cancellationToken = default)
+    {
+        var q27 = SchemaConstants.Quay27QueueId;
+        var cancelled = SchemaConstants.CancelledInvoiceNotes;
+
+        var query = _db.Customers.AsNoTracking()
+            .Include(c => c.CustomerQueues)
+            .Where(c => !c.IsDeleted)
+            .Where(c => c.SheetDate == today
+                        || (c.SheetDate < today
+                            && !c.FullSelfExport
+                            && c.Notes != cancelled
+                            && !c.CustomerQueues.Any(cq => cq.QueueId == q27)));
+
+        // Notes: cancelled rows use exact literal match (same as FE).
+        var rows = await query
+            .OrderBy(c => c.SheetDate)
+            .ThenBy(c => c.SortOrder)
+            .ThenBy(c => c.InvoiceCode)
+            .ThenBy(c => c.BillCreatedAt)
+            .ToListAsync(cancellationToken);
+        return rows.Select(Map).ToList();
+    }
+
     public async Task<IReadOnlyList<Guid>> GetActiveCustomerIdsWithSameNameAddressAsync(string nameAddress, CancellationToken cancellationToken = default)
     {
         var trimmed = nameAddress.Trim();

@@ -37,7 +37,7 @@ public sealed class PatchUserRequest
 
 public sealed class SheetPickerMembersPutRequest
 {
-    public IReadOnlyList<Guid> UserIds { get; set; } = Array.Empty<Guid>();
+    public IReadOnlyList<string> Names { get; set; } = Array.Empty<string>();
 }
 
 public sealed class ResetUserPasswordRequest

@@ -30,11 +30,11 @@ public class UsersController : ControllerBase
 
     [HttpGet("sheet-picker-members")]
     [Authorize(Roles = SchemaConstants.Roles.Admin)]
-    [ProducesResponseType(typeof(IReadOnlyList<Guid>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IReadOnlyList<Guid>>> SheetPickerMembers(CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(IReadOnlyList<string>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<string>>> SheetPickerMembers(CancellationToken cancellationToken)
     {
-        var ids = await _userAdmin.ListSheetPickerMemberIdsAsync(cancellationToken);
-        return Ok(ids);
+        var names = await _userAdmin.ListSheetPickerDraftNamesAsync(cancellationToken);
+        return Ok(names);
     }
 
     [HttpPut("sheet-picker-members")]
@@ -43,7 +43,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> PutSheetPickerMembers([FromBody] SheetPickerMembersPutRequest? body,
         CancellationToken cancellationToken)
     {
-        await _userAdmin.ReplaceSheetPickerMembersAsync(body?.UserIds ?? Array.Empty<Guid>(), cancellationToken);
+        await _userAdmin.ReplaceSheetPickerDraftNamesAsync(body?.Names ?? Array.Empty<string>(), cancellationToken);
         return Ok();
     }
 

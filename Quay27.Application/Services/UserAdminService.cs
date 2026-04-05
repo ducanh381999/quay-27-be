@@ -16,59 +16,84 @@ public class UserAdminService : IUserAdminService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IColumnPermissionRepository _columnPermissions;
-    private readonly ISheetPickerMemberRepository _sheetPickerMembers;
+    private const int MaxDraftStaffNameLength = 200;
+    private const int MaxDraftStaffNameCount = 200;
+
+    private readonly ISheetPickerDraftStaffNameRepository _draftStaffNames;
 
     public UserAdminService(
         IUserRepository users,
         IUnitOfWork unitOfWork,
         IPasswordHasher<User> passwordHasher,
         IColumnPermissionRepository columnPermissions,
-        ISheetPickerMemberRepository sheetPickerMembers)
+        ISheetPickerDraftStaffNameRepository draftStaffNames)
     {
         _users = users;
         _unitOfWork = unitOfWork;
         _passwordHasher = passwordHasher;
         _columnPermissions = columnPermissions;
-        _sheetPickerMembers = sheetPickerMembers;
+        _draftStaffNames = draftStaffNames;
     }
 
     public async Task<IReadOnlyList<UserPickerDto>> ListForSheetPickersAsync(
         CancellationToken cancellationToken = default)
     {
         var list = await _users.ListWithRolesAsync(cancellationToken);
-        var memberIds = (await _sheetPickerMembers.ListUserIdsAsync(cancellationToken)).ToHashSet();
-
-        return list
-            .Where(u => u.IsActive && (UserHasAdminRole(u) || memberIds.Contains(u.Id)))
-            .OrderBy(u => u.FullName, StringComparer.OrdinalIgnoreCase)
+        var fromUsers = list
+            .Where(u => u.IsActive && (UserHasAdminRole(u) || UserHasStaffRole(u)))
             .Select(u => new UserPickerDto { Username = u.Username, FullName = u.FullName })
+            .ToList();
+
+        var seen = new HashSet<string>(
+            fromUsers.Select(u => u.FullName.Trim()),
+            StringComparer.OrdinalIgnoreCase);
+
+        var custom = await _draftStaffNames.ListOrderedAsync(cancellationToken);
+        foreach (var raw in custom)
+        {
+            var n = raw.Trim();
+            if (n.Length == 0 || seen.Contains(n))
+                continue;
+            seen.Add(n);
+            fromUsers.Add(new UserPickerDto { Username = string.Empty, FullName = n });
+        }
+
+        return fromUsers
+            .OrderBy(u => u.FullName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(u => u.Username, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
-    public Task<IReadOnlyList<Guid>> ListSheetPickerMemberIdsAsync(CancellationToken cancellationToken = default) =>
-        _sheetPickerMembers.ListUserIdsAsync(cancellationToken);
+    public Task<IReadOnlyList<string>> ListSheetPickerDraftNamesAsync(CancellationToken cancellationToken = default) =>
+        _draftStaffNames.ListOrderedAsync(cancellationToken);
 
-    public async Task ReplaceSheetPickerMembersAsync(IReadOnlyList<Guid> userIds,
+    public async Task ReplaceSheetPickerDraftNamesAsync(IReadOnlyList<string> displayNames,
         CancellationToken cancellationToken = default)
     {
-        var distinct = userIds.Distinct().ToList();
-        foreach (var uid in distinct)
+        var normalized = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var raw in displayNames)
         {
-            var u = await _users.GetByIdAsync(uid, cancellationToken);
-            if (u is null)
-                throw new NotFoundException("One or more users were not found.");
-            if (!u.IsActive)
+            var n = raw.Trim();
+            if (n.Length == 0 || seen.Contains(n))
+                continue;
+            if (n.Length > MaxDraftStaffNameLength)
                 throw new ValidationException(new[]
                 {
-                    new ValidationFailure("userIds", $"User '{u.Username}' is inactive.")
+                    new ValidationFailure("names", $"Each name must be at most {MaxDraftStaffNameLength} characters.")
+                });
+            seen.Add(n);
+            normalized.Add(n);
+            if (normalized.Count > MaxDraftStaffNameCount)
+                throw new ValidationException(new[]
+                {
+                    new ValidationFailure("names", $"At most {MaxDraftStaffNameCount} names are allowed.")
                 });
         }
 
         await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            await _sheetPickerMembers.ClearAsync(cancellationToken);
-            foreach (var uid in distinct)
-                _sheetPickerMembers.Add(uid);
+            await _draftStaffNames.ReplaceAllAsync(normalized, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }, cancellationToken);
     }
@@ -198,6 +223,10 @@ public class UserAdminService : IUserAdminService
     private static bool UserHasAdminRole(User u) =>
         u.UserRoles.Any(ur =>
             string.Equals(ur.Role?.Name, SchemaConstants.Roles.Admin, StringComparison.Ordinal));
+
+    private static bool UserHasStaffRole(User u) =>
+        u.UserRoles.Any(ur =>
+            string.Equals(ur.Role?.Name, SchemaConstants.Roles.Staff, StringComparison.Ordinal));
 
     private static List<string> NormalizeRoleNames(IReadOnlyList<string> roleNames) =>
         roleNames.Select(r => r.Trim()).Where(r => r.Length > 0).Distinct(StringComparer.Ordinal).ToList();

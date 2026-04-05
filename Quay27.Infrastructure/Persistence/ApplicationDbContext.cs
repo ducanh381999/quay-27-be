@@ -20,7 +20,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<CustomerVersion> CustomerVersions => Set<CustomerVersion>();
     public DbSet<DuplicateFlag> DuplicateFlags => Set<DuplicateFlag>();
-    public DbSet<SheetPickerMember> SheetPickerMembers => Set<SheetPickerMember>();
+    public DbSet<SheetPickerDraftStaffName> SheetPickerDraftStaffNames => Set<SheetPickerDraftStaffName>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -118,11 +118,12 @@ public class ApplicationDbContext : DbContext
             e.HasOne(x => x.Customer).WithMany(c => c.DuplicateFlags).HasForeignKey(x => x.CustomerId);
         });
 
-        modelBuilder.Entity<SheetPickerMember>(e =>
+        modelBuilder.Entity<SheetPickerDraftStaffName>(e =>
         {
-            e.ToTable("SheetPickerMembers");
-            e.HasKey(x => x.UserId);
-            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.ToTable("SheetPickerDraftStaffNames");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
+            e.HasIndex(x => x.SortOrder);
         });
     }
 }
