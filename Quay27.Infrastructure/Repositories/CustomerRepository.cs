@@ -40,10 +40,10 @@ public class CustomerRepository : ICustomerRepository
         if (queueId is not null)
         {
             query = query.Where(c => c.CustomerQueues.Any(cq => cq.QueueId == queueId));
-            if (queueId == SchemaConstants.Quay27QueueId)
-            {
-                query = query.Where(c => !c.Export27);
-            }
+            // if (queueId == SchemaConstants.Quay27QueueId)
+            // {
+            //     query = query.Where(c => !c.Export27);
+            // }
         }
 
         var rows = queueId is null
