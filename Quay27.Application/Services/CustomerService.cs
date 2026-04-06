@@ -75,7 +75,8 @@ public class CustomerService : ICustomerService
         _logger = logger;
     }
 
-    public async Task<IReadOnlyList<CustomerDto>> ListBySheetDateAsync(DateOnly? sheetDate, int? queueId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<CustomerDto>> ListBySheetDateAsync(DateOnly? sheetDate, int? queueId, bool pendingExport27 = false,
+        CancellationToken cancellationToken = default)
     {
         EnsureAuthenticated();
         if (queueId is null && sheetDate is { } sd)
@@ -85,7 +86,8 @@ public class CustomerService : ICustomerService
                 return await _customers.ListTodayFullSheetWithCarryoverAsync(sd, cancellationToken);
         }
 
-        return await _customers.ListBySheetDateAsync(sheetDate, queueId, cancellationToken);
+        var applyPending = pendingExport27 && queueId == SchemaConstants.Quay27QueueId;
+        return await _customers.ListBySheetDateAsync(sheetDate, queueId, applyPending, cancellationToken);
     }
 
     public async Task<ImportCustomersExcelResult> ImportExcelAsync(

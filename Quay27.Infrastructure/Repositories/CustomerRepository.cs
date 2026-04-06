@@ -28,7 +28,8 @@ public class CustomerRepository : ICustomerRepository
         return row is null ? null : Map(row);
     }
 
-    public async Task<IReadOnlyList<CustomerDto>> ListBySheetDateAsync(DateOnly? sheetDate, int? queueId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<CustomerDto>> ListBySheetDateAsync(DateOnly? sheetDate, int? queueId, bool pendingExport27 = false,
+        CancellationToken cancellationToken = default)
     {
         var query = _db.Customers.AsNoTracking()
             .Include(c => c.CustomerQueues)
@@ -44,6 +45,8 @@ public class CustomerRepository : ICustomerRepository
             {
                 var limitDate = DateTime.UtcNow.AddDays(-30);
                 query = query.Where(c => c.BillCreatedAt >= limitDate);
+                if (pendingExport27)
+                    query = query.Where(c => !c.Export27);
             }
         }
 

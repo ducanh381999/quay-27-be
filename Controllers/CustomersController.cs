@@ -32,9 +32,10 @@ public class CustomersController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<CustomerDto>>> List(
         [FromQuery] DateOnly? sheetDate,
         [FromQuery] int? queueId,
-        CancellationToken cancellationToken)
+        [FromQuery] bool pendingExport27,
+        CancellationToken cancellationToken = default)
     {
-        var items = await _customerService.ListBySheetDateAsync(sheetDate, queueId, cancellationToken);
+        var items = await _customerService.ListBySheetDateAsync(sheetDate, queueId, pendingExport27, cancellationToken);
         return Ok(items);
     }
 

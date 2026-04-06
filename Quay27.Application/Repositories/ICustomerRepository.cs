@@ -7,7 +7,8 @@ public interface ICustomerRepository
 {
     Task<Customer?> GetTrackedAsync(Guid id, CancellationToken cancellationToken = default);
     Task<CustomerDto?> GetProjectedByIdAsync(Guid id, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<CustomerDto>> ListBySheetDateAsync(DateOnly? sheetDate, int? queueId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CustomerDto>> ListBySheetDateAsync(DateOnly? sheetDate, int? queueId, bool pendingExport27 = false,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Full sheet for &quot;today&quot; (VN): rows for <paramref name="today"/> plus older pending rows.</summary>
     Task<IReadOnlyList<CustomerDto>> ListTodayFullSheetWithCarryoverAsync(DateOnly today, CancellationToken cancellationToken = default);
