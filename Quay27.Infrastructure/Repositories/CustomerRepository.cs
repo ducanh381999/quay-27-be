@@ -38,7 +38,13 @@ public class CustomerRepository : ICustomerRepository
             query = query.Where(c => c.SheetDate == sheetDate.Value);
 
         if (queueId is not null)
+        {
             query = query.Where(c => c.CustomerQueues.Any(cq => cq.QueueId == queueId));
+            if (queueId == SchemaConstants.Quay27QueueId)
+            {
+                query = query.Where(c => !c.Export27);
+            }
+        }
 
         var rows = queueId is null
             ? await query
