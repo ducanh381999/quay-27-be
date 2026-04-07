@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using ClosedXML.Excel;
 using Microsoft.Extensions.Logging;
 using Quay27.Application.Abstractions;
 using Quay27.Application.Common;
@@ -151,6 +152,63 @@ public class CustomerService : ICustomerService
         }
 
         return new ImportCustomersExcelResult(rows.Count, imported, skipped, failed, errors);
+    }
+
+    public Task<byte[]> ExportGridAsync(ExportGridRequest request, CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        
+        using var workbook = new XLWorkbook();
+        var ws = workbook.Worksheets.Add(string.IsNullOrWhiteSpace(request.SheetName) ? "Data" : request.SheetName);
+
+        for (var i = 0; i < request.Columns.Count; i++)
+        {
+            var cell = ws.Cell(1, i + 1);
+            cell.Value = request.Columns[i].HeaderName;
+            cell.Style.Font.Bold = true;
+            cell.Style.Fill.BackgroundColor = XLColor.LightGray;
+        }
+
+        for (var r = 0; r < request.Rows.Count; r++)
+        {
+            var rowData = request.Rows[r];
+            for (var c = 0; c < request.Columns.Count; c++)
+            {
+                var field = request.Columns[c].Field;
+                if (!rowData.TryGetValue(field, out var element))
+                    continue;
+
+                var cell = ws.Cell(r + 2, c + 1);
+                switch (element.ValueKind)
+                {
+                    case JsonValueKind.String:
+                        cell.Value = element.GetString();
+                        break;
+                    case JsonValueKind.Number:
+                        cell.Value = element.GetDouble();
+                        break;
+                    case JsonValueKind.True:
+                        cell.Value = true;
+                        break;
+                    case JsonValueKind.False:
+                        cell.Value = false;
+                        break;
+                    case JsonValueKind.Null:
+                    case JsonValueKind.Undefined:
+                        cell.Value = string.Empty;
+                        break;
+                    default:
+                        cell.Value = element.GetRawText();
+                        break;
+                }
+            }
+        }
+
+        ws.Columns().AdjustToContents();
+
+        using var ms = new MemoryStream();
+        workbook.SaveAs(ms);
+        return Task.FromResult(ms.ToArray());
     }
 
     public async Task<CustomerDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)

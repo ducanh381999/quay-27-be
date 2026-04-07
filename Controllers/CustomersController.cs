@@ -87,6 +87,20 @@ public class CustomersController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("export-grid")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ExportGrid(
+        [FromBody] ExportGridRequest request,
+        CancellationToken cancellationToken)
+    {
+        var bytes = await _customerService.ExportGridAsync(request, cancellationToken);
+        var safeName = string.IsNullOrWhiteSpace(request.SheetName) ? "Data" : request.SheetName;
+        return File(
+            bytes,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"{safeName}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+    }
+
     [HttpGet("template-excel")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

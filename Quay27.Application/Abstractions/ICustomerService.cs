@@ -12,6 +12,7 @@ public interface ICustomerService
     Task<CustomerDto> UpdateAsync(Guid id, UpdateCustomerRequest request, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
     Task SetQueueAsync(Guid customerId, int queueId, SetCustomerQueueRequest request, CancellationToken cancellationToken = default);
+    Task<byte[]> ExportGridAsync(ExportGridRequest request, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<CustomerAuditLogEntryDto>> GetAuditLogsForCustomerAsync(
         Guid customerId,
