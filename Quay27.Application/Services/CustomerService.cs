@@ -84,11 +84,10 @@ public class CustomerService : ICustomerService
         {
             var todayVn = VietnamDate.TodayInVietnam();
             if (sd == todayVn)
-                return await _customers.ListTodayFullSheetWithCarryoverAsync(sd, cancellationToken);
+                return await _customers.ListTodayFullSheetWithCarryoverAsync(sd, pendingExport27, cancellationToken);
         }
 
-        var applyPending = pendingExport27 && queueId == SchemaConstants.Quay27QueueId;
-        return await _customers.ListBySheetDateAsync(sheetDate, queueId, applyPending, cancellationToken);
+        return await _customers.ListBySheetDateAsync(sheetDate, queueId, pendingExport27, cancellationToken);
     }
 
     public async Task<ImportCustomersExcelResult> ImportExcelAsync(

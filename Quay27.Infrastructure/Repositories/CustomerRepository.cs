@@ -63,7 +63,7 @@ public class CustomerRepository : ICustomerRepository
         return rows.Select(Map).ToList();
     }
 
-    public async Task<IReadOnlyList<CustomerDto>> ListTodayFullSheetWithCarryoverAsync(DateOnly today,
+    public async Task<IReadOnlyList<CustomerDto>> ListTodayFullSheetWithCarryoverAsync(DateOnly today, bool pendingExport27 = false,
         CancellationToken cancellationToken = default)
     {
         var q27 = SchemaConstants.Quay27QueueId;
@@ -77,6 +77,9 @@ public class CustomerRepository : ICustomerRepository
                             && !c.FullSelfExport
                             && c.Notes != cancelled
                             && !c.CustomerQueues.Any(cq => cq.QueueId == q27)));
+
+        if (pendingExport27)
+            query = query.Where(c => !c.Export27);
 
         // Notes: cancelled rows use exact literal match (same as FE).
         var rows = await query
