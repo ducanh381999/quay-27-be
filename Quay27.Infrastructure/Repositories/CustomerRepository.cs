@@ -45,10 +45,11 @@ public class CustomerRepository : ICustomerRepository
             {
                 var limitDate = DateTime.UtcNow.AddDays(-30);
                 query = query.Where(c => c.BillCreatedAt >= limitDate);
-                if (pendingExport27)
-                    query = query.Where(c => !c.Export27);
             }
         }
+
+        if (pendingExport27)
+            query = query.Where(c => !c.Export27);
 
         var rows = queueId is null
             ? await query
