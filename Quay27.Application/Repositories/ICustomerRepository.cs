@@ -8,10 +8,11 @@ public interface ICustomerRepository
     Task<Customer?> GetTrackedAsync(Guid id, CancellationToken cancellationToken = default);
     Task<CustomerDto?> GetProjectedByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<CustomerDto>> ListBySheetDateAsync(DateOnly? sheetDate, int? queueId, bool pendingExport27 = false,
-        CancellationToken cancellationToken = default);
+        string? searchTerm = null, CancellationToken cancellationToken = default);
 
     /// <summary>Full sheet for &quot;today&quot; (VN): rows for <paramref name="today"/> plus older pending rows.</summary>
-    Task<IReadOnlyList<CustomerDto>> ListTodayFullSheetWithCarryoverAsync(DateOnly today, bool pendingExport27 = false, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CustomerDto>> ListTodayFullSheetWithCarryoverAsync(DateOnly today, bool pendingExport27 = false, 
+        string? searchTerm = null, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Guid>> GetActiveCustomerIdsWithSameNameAddressAsync(string nameAddress, CancellationToken cancellationToken = default);
     Task AddAsync(Customer customer, CancellationToken cancellationToken = default);
     Task<bool> SoftDeleteAsync(Guid id, string updatedBy, CancellationToken cancellationToken = default);

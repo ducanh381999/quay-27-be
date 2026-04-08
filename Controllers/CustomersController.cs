@@ -33,9 +33,10 @@ public class CustomersController : ControllerBase
         [FromQuery] DateOnly? sheetDate,
         [FromQuery] int? queueId,
         [FromQuery] bool pendingExport27,
+        [FromQuery] string? search,
         CancellationToken cancellationToken = default)
     {
-        var items = await _customerService.ListBySheetDateAsync(sheetDate, queueId, pendingExport27, cancellationToken);
+        var items = await _customerService.ListBySheetDateAsync(sheetDate, queueId, pendingExport27, search, cancellationToken);
         return Ok(items);
     }
 

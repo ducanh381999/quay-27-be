@@ -5,7 +5,7 @@ namespace Quay27.Application.Abstractions;
 public interface ICustomerService
 {
     Task<IReadOnlyList<CustomerDto>> ListBySheetDateAsync(DateOnly? sheetDate, int? queueId, bool pendingExport27 = false,
-        CancellationToken cancellationToken = default);
+        string? searchTerm = null, CancellationToken cancellationToken = default);
     Task<ImportCustomersExcelResult> ImportExcelAsync(ImportCustomersExcelRequest request, CancellationToken cancellationToken = default);
     Task<CustomerDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<CustomerDto> CreateAsync(CreateCustomerRequest request, CancellationToken cancellationToken = default);

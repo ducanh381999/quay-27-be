@@ -29,11 +29,17 @@ public class CustomerRepository : ICustomerRepository
     }
 
     public async Task<IReadOnlyList<CustomerDto>> ListBySheetDateAsync(DateOnly? sheetDate, int? queueId, bool pendingExport27 = false,
-        CancellationToken cancellationToken = default)
+        string? searchTerm = null, CancellationToken cancellationToken = default)
     {
         var query = _db.Customers.AsNoTracking()
             .Include(c => c.CustomerQueues)
             .Where(c => !c.IsDeleted);
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var s = searchTerm.Trim();
+            query = query.Where(c => c.NameAddress.Contains(s));
+        }
 
         if (sheetDate is not null)
             query = query.Where(c => c.SheetDate == sheetDate.Value);
@@ -64,15 +70,22 @@ public class CustomerRepository : ICustomerRepository
     }
 
     public async Task<IReadOnlyList<CustomerDto>> ListTodayFullSheetWithCarryoverAsync(DateOnly today, bool pendingExport27 = false,
-        CancellationToken cancellationToken = default)
+        string? searchTerm = null, CancellationToken cancellationToken = default)
     {
         var q27 = SchemaConstants.Quay27QueueId;
         var cancelled = SchemaConstants.CancelledInvoiceNotes;
 
         var query = _db.Customers.AsNoTracking()
             .Include(c => c.CustomerQueues)
-            .Where(c => !c.IsDeleted)
-            .Where(c => c.SheetDate == today
+            .Where(c => !c.IsDeleted);
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var s = searchTerm.Trim();
+            query = query.Where(c => c.NameAddress.Contains(s));
+        }
+
+        query = query.Where(c => c.SheetDate == today
                         || (c.SheetDate < today
                             && !c.FullSelfExport
                             && c.Notes != cancelled

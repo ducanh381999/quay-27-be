@@ -77,17 +77,17 @@ public class CustomerService : ICustomerService
     }
 
     public async Task<IReadOnlyList<CustomerDto>> ListBySheetDateAsync(DateOnly? sheetDate, int? queueId, bool pendingExport27 = false,
-        CancellationToken cancellationToken = default)
+        string? searchTerm = null, CancellationToken cancellationToken = default)
     {
         EnsureAuthenticated();
         if (queueId is null && sheetDate is { } sd)
         {
             var todayVn = VietnamDate.TodayInVietnam();
             if (sd == todayVn)
-                return await _customers.ListTodayFullSheetWithCarryoverAsync(sd, pendingExport27, cancellationToken);
+                return await _customers.ListTodayFullSheetWithCarryoverAsync(sd, pendingExport27, searchTerm, cancellationToken);
         }
 
-        return await _customers.ListBySheetDateAsync(sheetDate, queueId, pendingExport27, cancellationToken);
+        return await _customers.ListBySheetDateAsync(sheetDate, queueId, pendingExport27, searchTerm, cancellationToken);
     }
 
     public async Task<ImportCustomersExcelResult> ImportExcelAsync(
