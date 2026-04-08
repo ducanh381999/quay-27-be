@@ -57,15 +57,12 @@ public class CustomerRepository : ICustomerRepository
         if (pendingExport27)
             query = query.Where(c => !c.Export27);
 
-        var rows = queueId is null
-            ? await query
-                .OrderBy(c => c.SortOrder)
-                .ThenBy(c => c.InvoiceCode)
-                .ThenBy(c => c.BillCreatedAt)
-                .ToListAsync(cancellationToken)
-            : await query
-                .OrderBy(c => c.CreatedDate)
-                .ToListAsync(cancellationToken);
+        var rows = await query
+            .OrderBy(c => c.BillCreatedAt == DateTime.MinValue ? 1 : 0)
+            .ThenBy(c => c.BillCreatedAt)
+            .ThenBy(c => c.SortOrder)
+            .ThenBy(c => c.InvoiceCode)
+            .ToListAsync(cancellationToken);
         return rows.Select(Map).ToList();
     }
 
@@ -96,10 +93,11 @@ public class CustomerRepository : ICustomerRepository
 
         // Notes: cancelled rows use exact literal match (same as FE).
         var rows = await query
-            .OrderBy(c => c.SheetDate)
+            .OrderBy(c => c.BillCreatedAt == DateTime.MinValue ? 1 : 0)
+            .ThenBy(c => c.BillCreatedAt)
+            .ThenBy(c => c.SheetDate)
             .ThenBy(c => c.SortOrder)
             .ThenBy(c => c.InvoiceCode)
-            .ThenBy(c => c.BillCreatedAt)
             .ToListAsync(cancellationToken);
         return rows.Select(Map).ToList();
     }
