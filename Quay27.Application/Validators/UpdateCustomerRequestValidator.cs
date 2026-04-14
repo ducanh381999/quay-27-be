@@ -18,7 +18,6 @@ public class UpdateCustomerRequestValidator : AbstractValidator<UpdateCustomerRe
         When(x => x.InstallStaffCm is not null, () => RuleFor(x => x.InstallStaffCm!).MaximumLength(128));
         When(x => x.GoodsSenderNote is not null, () => RuleFor(x => x.GoodsSenderNote!).MaximumLength(256));
         When(x => x.Status is not null, () => RuleFor(x => x.Status!).MaximumLength(128));
-        When(x => x.Quantity is not null, () => RuleFor(x => x.Quantity!).NotEmpty());
         When(x => x.TotalAmount is not null, () => RuleFor(x => x.TotalAmount!).MaximumLength(128));
     }
 
