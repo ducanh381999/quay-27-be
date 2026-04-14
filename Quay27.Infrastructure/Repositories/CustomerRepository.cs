@@ -174,7 +174,9 @@ public class CustomerRepository : ICustomerRepository
             c.CreateMachine,
             c.DraftStaff,
             c.Quantity,
+            c.TotalAmount,
             c.InstallStaffCm,
+
             c.ManagerApproved,
             c.Kio27Received,
             c.Export27,
