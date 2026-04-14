@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Quay27.Application.Customers;
 
 public record UpdateCustomerRequest(
@@ -7,6 +9,7 @@ public record UpdateCustomerRequest(
     string? NameAddress,
     string? CreateMachine,
     string? DraftStaff,
+    [property: JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
     string? Quantity,
     string? InstallStaffCm,
     bool? ManagerApproved,

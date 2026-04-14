@@ -125,7 +125,7 @@ public class CustomerService : ICustomerService
                 row.CustomerRaw.Trim(),
                 row.CreatorRaw.Trim(),
                 string.Empty, // DraftStaff
-                string.Empty, // Quantity
+                row.QuantityRaw, // Quantity
                 string.Empty, // InstallStaffCm
                 false,        // ManagerApproved
                 false,        // Kio27Received
