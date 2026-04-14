@@ -415,6 +415,13 @@ public class CustomerService : ICustomerService
                 }
             }
 
+            if (request.Quantity is not null)
+            {
+                await EnsureCanEditColumnAsync(userId, SchemaConstants.CustomerColumns.Quantity, cancellationToken);
+                var v = request.Quantity;
+                if (v != entity.Quantity)
+                {
+                    audits.Add(CreateAudit(SchemaConstants.CustomersTable, id, SchemaConstants.CustomerColumns.Quantity, entity.Quantity, v, "Update", username, now));
                     entity.Quantity = v;
                 }
             }
@@ -893,7 +900,8 @@ public class CustomerService : ICustomerService
         string GoodsSenderNote,
         string AdditionalNotes,
         DateOnly SheetDate,
-        string Status)
+        string Status,
+        string TotalAmount)
     {
         public static CustomerSnapshot FromEntity(Customer c) =>
             new(
@@ -913,6 +921,7 @@ public class CustomerService : ICustomerService
                 c.GoodsSenderNote,
                 c.AdditionalNotes,
                 c.SheetDate,
-                c.Status);
+                c.Status,
+                c.TotalAmount);
     }
 }
