@@ -23,6 +23,7 @@ public class CustomerService : ICustomerService
         SchemaConstants.CustomerColumns.CreateMachine,
         SchemaConstants.CustomerColumns.DraftStaff,
         SchemaConstants.CustomerColumns.Quantity,
+        SchemaConstants.CustomerColumns.TotalAmount,
         SchemaConstants.CustomerColumns.InstallStaffCm,
         SchemaConstants.CustomerColumns.ManagerApproved,
         SchemaConstants.CustomerColumns.Kio27Received,
@@ -126,6 +127,7 @@ public class CustomerService : ICustomerService
                 row.CreatorRaw.Trim(),
                 string.Empty, // DraftStaff
                 row.QuantityRaw, // Quantity
+                row.TotalAmountRaw, // TotalAmount
                 string.Empty, // InstallStaffCm
                 false,        // ManagerApproved
                 false,        // Kio27Received
@@ -260,6 +262,7 @@ public class CustomerService : ICustomerService
                 CreateMachine = request.CreateMachine.Trim(),
                 DraftStaff = request.DraftStaff.Trim(),
                 Quantity = request.Quantity,
+                TotalAmount = request.TotalAmount,
                 InstallStaffCm = request.InstallStaffCm.Trim(),
                 ManagerApproved = request.ManagerApproved,
                 Kio27Received = request.Kio27Received,
@@ -412,14 +415,18 @@ public class CustomerService : ICustomerService
                 }
             }
 
-            if (request.Quantity is not null)
-            {
-                await EnsureCanEditColumnAsync(userId, SchemaConstants.CustomerColumns.Quantity, cancellationToken);
-                var v = request.Quantity;
-                if (v != entity.Quantity)
-                {
-                    audits.Add(CreateAudit(SchemaConstants.CustomersTable, id, SchemaConstants.CustomerColumns.Quantity, entity.Quantity, v, "Update", username, now));
                     entity.Quantity = v;
+                }
+            }
+            
+            if (request.TotalAmount is not null)
+            {
+                await EnsureCanEditColumnAsync(userId, SchemaConstants.CustomerColumns.TotalAmount, cancellationToken);
+                var v = request.TotalAmount;
+                if (v != entity.TotalAmount)
+                {
+                    audits.Add(CreateAudit(SchemaConstants.CustomersTable, id, SchemaConstants.CustomerColumns.TotalAmount, entity.TotalAmount, v, "Update", username, now));
+                    entity.TotalAmount = v;
                 }
             }
 
@@ -764,6 +771,7 @@ public class CustomerService : ICustomerService
         Add(SchemaConstants.CustomerColumns.CreateMachine, e.CreateMachine, audits);
         Add(SchemaConstants.CustomerColumns.DraftStaff, e.DraftStaff, audits);
         Add(SchemaConstants.CustomerColumns.Quantity, e.Quantity, audits);
+        Add(SchemaConstants.CustomerColumns.TotalAmount, e.TotalAmount, audits);
         Add(SchemaConstants.CustomerColumns.InstallStaffCm, e.InstallStaffCm, audits);
         Add(SchemaConstants.CustomerColumns.ManagerApproved, e.ManagerApproved.ToString(), audits);
         Add(SchemaConstants.CustomerColumns.Kio27Received, e.Kio27Received.ToString(), audits);

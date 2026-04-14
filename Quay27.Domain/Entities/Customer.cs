@@ -19,6 +19,8 @@ public class Customer
     public string CreateMachine { get; set; } = string.Empty;
     public string DraftStaff { get; set; } = string.Empty;
     public string Quantity { get; set; } = string.Empty;
+    public string TotalAmount { get; set; } = string.Empty;
+
 
     /// <summary>NV Lắp CM</summary>
     public string InstallStaffCm { get; set; } = string.Empty;

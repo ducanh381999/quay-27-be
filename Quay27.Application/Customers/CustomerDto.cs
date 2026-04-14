@@ -9,6 +9,8 @@ public record CustomerDto(
     string CreateMachine,
     string DraftStaff,
     string Quantity,
+    string TotalAmount,
+
     string InstallStaffCm,
     bool ManagerApproved,
     bool Kio27Received,

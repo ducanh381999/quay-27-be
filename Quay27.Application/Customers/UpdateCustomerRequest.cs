@@ -9,8 +9,9 @@ public record UpdateCustomerRequest(
     string? NameAddress,
     string? CreateMachine,
     string? DraftStaff,
-    [property: JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
     string? Quantity,
+    string? TotalAmount,
+
     string? InstallStaffCm,
     bool? ManagerApproved,
     bool? Kio27Received,

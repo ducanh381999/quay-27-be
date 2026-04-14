@@ -14,6 +14,7 @@ public class CreateCustomerRequestValidator : AbstractValidator<CreateCustomerRe
         RuleFor(x => x.InstallStaffCm).MaximumLength(128);
         RuleFor(x => x.GoodsSenderNote).MaximumLength(256);
         RuleFor(x => x.Status).MaximumLength(128);
+        RuleFor(x => x.TotalAmount).MaximumLength(128);
 
     }
 }
