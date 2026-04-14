@@ -176,7 +176,6 @@ public class CustomerRepository : ICustomerRepository
             c.Quantity,
             c.TotalAmount,
             c.InstallStaffCm,
-
             c.ManagerApproved,
             c.Kio27Received,
             c.Export27,
