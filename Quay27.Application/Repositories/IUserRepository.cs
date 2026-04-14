@@ -12,6 +12,7 @@ public interface IUserRepository
     Task<User?> GetTrackedByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<bool> UsernameExistsAsync(string username, Guid? excludeUserId, CancellationToken cancellationToken = default);
     void Add(User user);
+    void RemoveRange(IEnumerable<User> users);
     Task SetRolesByNamesAsync(Guid userId, IReadOnlyList<string> roleNames, CancellationToken cancellationToken = default);
 
     Task<HashSet<string>> GetExistingRoleNamesSetAsync(CancellationToken cancellationToken = default);

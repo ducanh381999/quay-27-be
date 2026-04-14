@@ -55,11 +55,23 @@ public class CustomerRepository : ICustomerRepository
         }
 
         if (pendingExport27)
-            query = query.Where(c => !c.Export27);
+        {
+            if (queueId == SchemaConstants.Quay27QueueId)
+            {
+                // Ở màn hình Quầy 27: Lọc những đơn chưa xuất Excel
+                query = query.Where(c => !c.Export27);
+            }
+            else
+            {
+                // Ở màn hình khác: Lọc những đơn chưa được gán vào Quầy 27
+                var q27Id = SchemaConstants.Quay27QueueId;
+                query = query.Where(c => !c.CustomerQueues.Any(cq => cq.QueueId == q27Id));
+            }
+        }
 
         var rows = await query
             .OrderBy(c => c.BillCreatedAt == DateTime.MinValue ? 1 : 0)
-            .ThenBy(c => c.BillCreatedAt)
+            .ThenByDescending(c => c.BillCreatedAt)
             .ThenBy(c => c.SortOrder)
             .ThenBy(c => c.InvoiceCode)
             .ToListAsync(cancellationToken);
@@ -89,12 +101,15 @@ public class CustomerRepository : ICustomerRepository
                             && !c.CustomerQueues.Any(cq => cq.QueueId == q27)));
 
         if (pendingExport27)
-            query = query.Where(c => !c.Export27);
+        {
+            // Ở Full Sheet, pendingExport27 có nghĩa là "Chưa cấp 27"
+            query = query.Where(c => !c.CustomerQueues.Any(cq => cq.QueueId == q27));
+        }
 
         // Notes: cancelled rows use exact literal match (same as FE).
         var rows = await query
             .OrderBy(c => c.BillCreatedAt == DateTime.MinValue ? 1 : 0)
-            .ThenBy(c => c.BillCreatedAt)
+            .ThenByDescending(c => c.BillCreatedAt)
             .ThenBy(c => c.SheetDate)
             .ThenBy(c => c.SortOrder)
             .ThenBy(c => c.InvoiceCode)

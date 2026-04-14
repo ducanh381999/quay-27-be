@@ -7,7 +7,7 @@ public record CreateCustomerRequest(
     string NameAddress,
     string CreateMachine,
     string DraftStaff,
-    int Quantity,
+    string Quantity,
     string InstallStaffCm,
     bool ManagerApproved,
     bool Kio27Received,

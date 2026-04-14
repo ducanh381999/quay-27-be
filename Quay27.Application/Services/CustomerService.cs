@@ -124,17 +124,19 @@ public class CustomerService : ICustomerService
                 billCreatedAt,
                 row.CustomerRaw.Trim(),
                 row.CreatorRaw.Trim(),
-                string.Empty,
-                0,
-                string.Empty,
-                false,
-                false,
-                false,
-                string.Empty,
-                string.Empty,
-                string.Empty,
+                string.Empty, // DraftStaff
+                string.Empty, // Quantity
+                string.Empty, // InstallStaffCm
+                false,        // ManagerApproved
+                false,        // Kio27Received
+                false,        // Export27
+                string.Empty, // Notes
+                string.Empty, // GoodsSenderNote
+                string.Empty, // AdditionalNotes
                 request.SheetDate,
-                "Mới");
+                "Mới",
+                false         // FullSelfExport
+            );
 
             try
             {
@@ -413,10 +415,10 @@ public class CustomerService : ICustomerService
             if (request.Quantity is not null)
             {
                 await EnsureCanEditColumnAsync(userId, SchemaConstants.CustomerColumns.Quantity, cancellationToken);
-                var v = request.Quantity.Value;
+                var v = request.Quantity;
                 if (v != entity.Quantity)
                 {
-                    audits.Add(CreateAudit(SchemaConstants.CustomersTable, id, SchemaConstants.CustomerColumns.Quantity, entity.Quantity.ToString(), v.ToString(), "Update", username, now));
+                    audits.Add(CreateAudit(SchemaConstants.CustomersTable, id, SchemaConstants.CustomerColumns.Quantity, entity.Quantity, v, "Update", username, now));
                     entity.Quantity = v;
                 }
             }
@@ -570,6 +572,11 @@ public class CustomerService : ICustomerService
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        await BulkDeleteAsync(new[] { id }, cancellationToken);
+    }
+
+    public async Task BulkDeleteAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
+    {
         EnsureAuthenticated();
         if (!_currentUser.IsAdmin)
         {
@@ -581,40 +588,48 @@ public class CustomerService : ICustomerService
         }
 
         var username = _currentUser.Username;
-        var sheetDate = await _unitOfWork.ExecuteInTransactionAsync(async () =>
+        var affectedSheetDates = new HashSet<DateOnly>();
+
+        await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            var entity = await _customers.GetTrackedAsync(id, cancellationToken);
-            if (entity is null)
-                throw new NotFoundException("Customer not found.");
-
-            var inQuay27 =
-                await _customerQueues.FindAsync(id, SchemaConstants.Quay27QueueId, cancellationToken);
-            if (inQuay27 is not null)
-                throw new ConflictException("Cannot delete a customer already on Quầy 27.");
-
-            var sd = entity.SheetDate;
-            var nameAddress = entity.NameAddress;
-            var ok = await _customers.SoftDeleteAsync(id, username, cancellationToken);
-            if (!ok)
-                throw new NotFoundException("Customer not found.");
-
             var now = DateTime.UtcNow;
-            await _auditLogs.AddRangeAsync(new[]
+            var nameAddressesToRecompute = new HashSet<string>();
+
+            foreach (var id in ids)
             {
-                CreateAudit(SchemaConstants.CustomersTable, id, "IsDeleted", "false", "true", "SoftDelete", username, now)
-            }, cancellationToken);
+                var entity = await _customers.GetTrackedAsync(id, cancellationToken);
+                if (entity is null)
+                    continue;
+
+                var inQuay27 = await _customerQueues.FindAsync(id, SchemaConstants.Quay27QueueId, cancellationToken);
+                if (inQuay27 is not null)
+                    throw new ConflictException($"Cannot delete customer '{entity.InvoiceCode}' because it is already on Quầy 27.");
+
+                affectedSheetDates.Add(entity.SheetDate);
+                nameAddressesToRecompute.Add(entity.NameAddress);
+
+                var ok = await _customers.SoftDeleteAsync(id, username, cancellationToken);
+                if (ok)
+                {
+                    await _auditLogs.AddRangeAsync(new[]
+                    {
+                        CreateAudit(SchemaConstants.CustomersTable, id, "IsDeleted", "false", "true", "SoftDelete", username, now)
+                    }, cancellationToken);
+                }
+            }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            await RecomputeDuplicatesForNameAddressAsync(nameAddress, cancellationToken);
+            foreach (var na in nameAddressesToRecompute)
+            {
+                await RecomputeDuplicatesForNameAddressAsync(na, cancellationToken);
+            }
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            return sd;
         }, cancellationToken);
 
-        _logger.LogInformation("Customer {CustomerId} soft-deleted by {User}", id, username);
-
-        await _realtime.NotifyAsync(
-            new CustomerSheetChangeNotification(sheetDate, id, "deleted"), cancellationToken);
+        foreach (var sd in affectedSheetDates)
+        {
+            await _realtime.NotifyAsync(new CustomerSheetChangeNotification(sd, Guid.Empty, "deleted"), cancellationToken);
+        }
     }
 
     public async Task SetQueueAsync(Guid customerId, int queueId, SetCustomerQueueRequest request, CancellationToken cancellationToken = default)
@@ -748,7 +763,7 @@ public class CustomerService : ICustomerService
         Add(SchemaConstants.CustomerColumns.NameAddress, e.NameAddress, audits);
         Add(SchemaConstants.CustomerColumns.CreateMachine, e.CreateMachine, audits);
         Add(SchemaConstants.CustomerColumns.DraftStaff, e.DraftStaff, audits);
-        Add(SchemaConstants.CustomerColumns.Quantity, e.Quantity.ToString(), audits);
+        Add(SchemaConstants.CustomerColumns.Quantity, e.Quantity, audits);
         Add(SchemaConstants.CustomerColumns.InstallStaffCm, e.InstallStaffCm, audits);
         Add(SchemaConstants.CustomerColumns.ManagerApproved, e.ManagerApproved.ToString(), audits);
         Add(SchemaConstants.CustomerColumns.Kio27Received, e.Kio27Received.ToString(), audits);
@@ -860,7 +875,7 @@ public class CustomerService : ICustomerService
         string NameAddress,
         string CreateMachine,
         string DraftStaff,
-        int Quantity,
+        string Quantity,
         string InstallStaffCm,
         bool ManagerApproved,
         bool Kio27Received,

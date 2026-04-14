@@ -135,6 +135,14 @@ public class CustomersController : ControllerBase
         return Ok();
     }
 
+    [HttpPost("bulk-delete")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> BulkDelete([FromBody] IReadOnlyList<Guid> ids, CancellationToken cancellationToken)
+    {
+        await _customerService.BulkDeleteAsync(ids, cancellationToken);
+        return Ok();
+    }
+
     [HttpPut("{id:guid}/queues/{queueId:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> SetQueue(Guid id, int queueId, [FromBody] SetCustomerQueueRequest? request, CancellationToken cancellationToken)

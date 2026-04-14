@@ -22,4 +22,5 @@ public interface IUserAdminService
     Task<UserSummaryDto> PatchAsync(Guid id, PatchUserRequest request, CancellationToken cancellationToken = default);
 
     Task ResetPasswordAsync(Guid id, ResetUserPasswordRequest request, CancellationToken cancellationToken = default);
+    Task BulkDeleteAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
 }

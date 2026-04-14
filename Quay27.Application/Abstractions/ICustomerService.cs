@@ -11,6 +11,7 @@ public interface ICustomerService
     Task<CustomerDto> CreateAsync(CreateCustomerRequest request, CancellationToken cancellationToken = default);
     Task<CustomerDto> UpdateAsync(Guid id, UpdateCustomerRequest request, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+    Task BulkDeleteAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
     Task SetQueueAsync(Guid customerId, int queueId, SetCustomerQueueRequest request, CancellationToken cancellationToken = default);
     Task<byte[]> ExportGridAsync(ExportGridRequest request, CancellationToken cancellationToken = default);
 

@@ -5,6 +5,7 @@ using Quay27.Application.Abstractions;
 using Quay27.Application.Common.Exceptions;
 using Quay27.Application.Repositories;
 using Quay27.Application.Users;
+using Quay27.Application.Auth;
 using Quay27.Domain.Constants;
 using Quay27.Domain.Entities;
 
@@ -20,19 +21,22 @@ public class UserAdminService : IUserAdminService
     private const int MaxDraftStaffNameCount = 200;
 
     private readonly ISheetPickerDraftStaffNameRepository _draftStaffNames;
+    private readonly ICurrentUser _currentUser;
 
     public UserAdminService(
         IUserRepository users,
         IUnitOfWork unitOfWork,
         IPasswordHasher<User> passwordHasher,
         IColumnPermissionRepository columnPermissions,
-        ISheetPickerDraftStaffNameRepository draftStaffNames)
+        ISheetPickerDraftStaffNameRepository draftStaffNames,
+        ICurrentUser currentUser)
     {
         _users = users;
         _unitOfWork = unitOfWork;
         _passwordHasher = passwordHasher;
         _columnPermissions = columnPermissions;
         _draftStaffNames = draftStaffNames;
+        _currentUser = currentUser;
     }
 
     public async Task<IReadOnlyList<UserPickerDto>> ListForSheetPickersAsync(
@@ -198,6 +202,32 @@ public class UserAdminService : IUserAdminService
 
         user.PasswordHash = _passwordHasher.HashPassword(user, request.NewPassword);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task BulkDeleteAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        var idList = ids.ToList();
+        if (idList.Count == 0) return;
+
+        var currentUserId = _currentUser.UserId;
+        if (idList.Contains(currentUserId ?? Guid.Empty))
+            throw new ConflictException("You cannot delete your own account.");
+
+        var toDelete = new List<User>();
+        foreach (var id in idList)
+        {
+            var u = await _users.GetTrackedByIdAsync(id, cancellationToken);
+            if (u != null) toDelete.Add(u);
+        }
+
+        if (toDelete.Count > 0)
+        {
+            await _unitOfWork.ExecuteInTransactionAsync(async () =>
+            {
+                _users.RemoveRange(toDelete);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }, cancellationToken);
+        }
     }
 
     private static UserSummaryDto MapUser(User u)

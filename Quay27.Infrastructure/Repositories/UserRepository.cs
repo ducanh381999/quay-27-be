@@ -53,6 +53,7 @@ public class UserRepository : IUserRepository
                 cancellationToken);
 
     public void Add(User user) => _db.Users.Add(user);
+    public void RemoveRange(IEnumerable<User> users) => _db.Users.RemoveRange(users);
 
     public async Task SetRolesByNamesAsync(Guid userId, IReadOnlyList<string> roleNames, CancellationToken cancellationToken = default)
     {

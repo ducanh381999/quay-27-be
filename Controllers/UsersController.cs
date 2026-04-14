@@ -87,6 +87,15 @@ public class UsersController : ControllerBase
         return Ok(updated);
     }
 
+    [HttpPost("bulk-delete")]
+    [Authorize(Roles = SchemaConstants.Roles.Admin)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> BulkDelete([FromBody] IReadOnlyList<Guid> ids, CancellationToken cancellationToken)
+    {
+        await _userAdmin.BulkDeleteAsync(ids, cancellationToken);
+        return Ok();
+    }
+
     [HttpPost("{id:guid}/password")]
     [Authorize(Roles = SchemaConstants.Roles.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
