@@ -1,6 +1,7 @@
 using System.Text;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -17,10 +18,22 @@ using Quay27_Be.Realtime;
 using Quay27_Be.Security;
 
 var builder = WebApplication.CreateBuilder(args);
-
+// ... existing configuration ...
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 builder.Services.Configure<CorsOptions>(builder.Configuration.GetSection(CorsOptions.SectionName));
+
+// Configure Forwarded Headers to handle Nginx proxy
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // Clear known networks and proxies since we're in a container environment
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
+// ...
+// ... rest of builder.Services calls ...
     ?? throw new InvalidOperationException("Jwt configuration is missing.");
 
 builder.Services.AddApplication();
@@ -112,6 +125,8 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddHostedService<EndOfDayBackgroundService>();
 
 var app = builder.Build();
+
+app.UseForwardedHeaders();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
