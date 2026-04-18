@@ -63,6 +63,7 @@ public class ApplicationDbContext : DbContext
             e.Property(x => x.NameAddress).HasColumnType("longtext").IsRequired();
             e.Property(x => x.CreateMachine).HasMaxLength(128);
             e.Property(x => x.DraftStaff).HasMaxLength(128);
+            e.Property(x => x.InspectorStaff).HasMaxLength(128);
             e.Property(x => x.InstallStaffCm).HasMaxLength(128);
             e.Property(x => x.Notes).HasColumnType("longtext");
             e.Property(x => x.GoodsSenderNote).HasMaxLength(256);

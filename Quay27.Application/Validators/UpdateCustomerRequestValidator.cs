@@ -19,6 +19,7 @@ public class UpdateCustomerRequestValidator : AbstractValidator<UpdateCustomerRe
         When(x => x.GoodsSenderNote is not null, () => RuleFor(x => x.GoodsSenderNote!).MaximumLength(256));
         When(x => x.Status is not null, () => RuleFor(x => x.Status!).MaximumLength(128));
         When(x => x.TotalAmount is not null, () => RuleFor(x => x.TotalAmount!).MaximumLength(128));
+        When(x => x.InspectorStaff is not null, () => RuleFor(x => x.InspectorStaff!).MaximumLength(128));
     }
 
     private static bool HasAnyPatch(UpdateCustomerRequest r) =>
@@ -30,6 +31,7 @@ public class UpdateCustomerRequestValidator : AbstractValidator<UpdateCustomerRe
         || r.DraftStaff is not null
         || r.Quantity is not null
         || r.TotalAmount is not null
+        || r.InspectorStaff is not null
         || r.InstallStaffCm is not null
         || r.ManagerApproved is not null
         || r.Kio27Received is not null

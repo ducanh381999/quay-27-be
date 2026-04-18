@@ -29,7 +29,6 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("sheet-picker-members")]
-    [Authorize(Roles = SchemaConstants.Roles.Admin)]
     [ProducesResponseType(typeof(IReadOnlyList<string>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<string>>> SheetPickerMembers(CancellationToken cancellationToken)
     {

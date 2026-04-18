@@ -21,6 +21,8 @@ public class Customer
     public string Quantity { get; set; } = string.Empty;
     public string TotalAmount { get; set; } = string.Empty;
 
+    /// <summary>NV kiểm</summary>
+    public string InspectorStaff { get; set; } = string.Empty;
 
     /// <summary>NV Lắp CM</summary>
     public string InstallStaffCm { get; set; } = string.Empty;

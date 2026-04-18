@@ -24,6 +24,7 @@ public class CustomerService : ICustomerService
         SchemaConstants.CustomerColumns.DraftStaff,
         SchemaConstants.CustomerColumns.Quantity,
         SchemaConstants.CustomerColumns.TotalAmount,
+        SchemaConstants.CustomerColumns.InspectorStaff,
         SchemaConstants.CustomerColumns.InstallStaffCm,
         SchemaConstants.CustomerColumns.ManagerApproved,
         SchemaConstants.CustomerColumns.Kio27Received,
@@ -143,6 +144,7 @@ public class CustomerService : ICustomerService
                 row.DraftStaffRaw.Trim(), // DraftStaff
                 row.QuantityRaw, // Quantity
                 string.Empty, // TotalAmount
+                string.Empty, // InspectorStaff
                 string.Empty, // InstallStaffCm
                 false,        // ManagerApproved
                 false,        // Kio27Received
@@ -279,6 +281,7 @@ public class CustomerService : ICustomerService
                 DraftStaff = request.DraftStaff.Trim(),
                 Quantity = request.Quantity,
                 TotalAmount = request.TotalAmount,
+                InspectorStaff = request.InspectorStaff.Trim(),
                 InstallStaffCm = request.InstallStaffCm.Trim(),
                 ManagerApproved = request.ManagerApproved,
                 Kio27Received = request.Kio27Received,
@@ -450,6 +453,17 @@ public class CustomerService : ICustomerService
                 {
                     audits.Add(CreateAudit(SchemaConstants.CustomersTable, id, SchemaConstants.CustomerColumns.TotalAmount, entity.TotalAmount, v, "Update", username, now));
                     entity.TotalAmount = v;
+                }
+            }
+
+            if (request.InspectorStaff is not null)
+            {
+                await EnsureCanEditColumnAsync(userId, SchemaConstants.CustomerColumns.InspectorStaff, cancellationToken);
+                var v = request.InspectorStaff.Trim();
+                if (v != entity.InspectorStaff)
+                {
+                    audits.Add(CreateAudit(SchemaConstants.CustomersTable, id, SchemaConstants.CustomerColumns.InspectorStaff, entity.InspectorStaff, v, "Update", username, now));
+                    entity.InspectorStaff = v;
                 }
             }
 
@@ -795,6 +809,7 @@ public class CustomerService : ICustomerService
         Add(SchemaConstants.CustomerColumns.DraftStaff, e.DraftStaff, audits);
         Add(SchemaConstants.CustomerColumns.Quantity, e.Quantity, audits);
         Add(SchemaConstants.CustomerColumns.TotalAmount, e.TotalAmount, audits);
+        Add(SchemaConstants.CustomerColumns.InspectorStaff, e.InspectorStaff, audits);
         Add(SchemaConstants.CustomerColumns.InstallStaffCm, e.InstallStaffCm, audits);
         Add(SchemaConstants.CustomerColumns.ManagerApproved, e.ManagerApproved.ToString(), audits);
         Add(SchemaConstants.CustomerColumns.Kio27Received, e.Kio27Received.ToString(), audits);
@@ -917,7 +932,8 @@ public class CustomerService : ICustomerService
         string AdditionalNotes,
         DateOnly SheetDate,
         string Status,
-        string TotalAmount)
+        string TotalAmount,
+        string InspectorStaff)
     {
         public static CustomerSnapshot FromEntity(Customer c) =>
             new(
@@ -938,6 +954,7 @@ public class CustomerService : ICustomerService
                 c.AdditionalNotes,
                 c.SheetDate,
                 c.Status,
-                c.TotalAmount);
+                c.TotalAmount,
+                c.InspectorStaff);
     }
 }

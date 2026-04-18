@@ -11,6 +11,7 @@ public record UpdateCustomerRequest(
     string? DraftStaff,
     string? Quantity,
     string? TotalAmount,
+    string? InspectorStaff,
 
     string? InstallStaffCm,
     bool? ManagerApproved,

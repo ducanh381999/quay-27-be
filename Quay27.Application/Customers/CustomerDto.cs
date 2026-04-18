@@ -10,6 +10,7 @@ public record CustomerDto(
     string DraftStaff,
     string Quantity,
     string TotalAmount,
+    string InspectorStaff,
 
     string InstallStaffCm,
     bool ManagerApproved,

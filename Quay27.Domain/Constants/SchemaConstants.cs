@@ -17,6 +17,7 @@ public static class SchemaConstants
         public const string DraftStaff = nameof(Customer.DraftStaff);
         public const string Quantity = nameof(Customer.Quantity);
         public const string TotalAmount = nameof(Customer.TotalAmount);
+        public const string InspectorStaff = nameof(Customer.InspectorStaff);
 
         public const string InstallStaffCm = nameof(Customer.InstallStaffCm);
         public const string ManagerApproved = nameof(Customer.ManagerApproved);
