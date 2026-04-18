@@ -36,6 +36,21 @@ public class CustomerService : ICustomerService
         SchemaConstants.CustomerColumns.Status
     };
 
+    /// <summary>
+    /// Cột cần quyền sửa khi tạo bản ghi từ import Excel — khớp các cột map từ file + SheetDate (form);
+    /// không gồm trường chỉ nhận mặc định rỗng/false (TotalAmount, cờ, ghi chú, STT hệ thống…).
+    /// </summary>
+    private static readonly string[] ImportCreateCustomerColumns =
+    {
+        SchemaConstants.CustomerColumns.InvoiceCode,
+        SchemaConstants.CustomerColumns.BillCreatedAt,
+        SchemaConstants.CustomerColumns.NameAddress,
+        SchemaConstants.CustomerColumns.CreateMachine,
+        SchemaConstants.CustomerColumns.DraftStaff,
+        SchemaConstants.CustomerColumns.Quantity,
+        SchemaConstants.CustomerColumns.SheetDate,
+    };
+
     private readonly ICustomerRepository _customers;
     private readonly IUserRepository _users;
     private readonly ICustomerQueueRepository _customerQueues;
@@ -243,7 +258,8 @@ public class CustomerService : ICustomerService
         var userId = _currentUser.UserId!.Value;
         var username = _currentUser.Username;
 
-        await EnsureCanEditColumnsAsync(userId, AllCustomerColumns, cancellationToken);
+        var columnsToAuthorize = fromImport ? ImportCreateCustomerColumns : AllCustomerColumns;
+        await EnsureCanEditColumnsAsync(userId, columnsToAuthorize, cancellationToken);
 
         var dto = await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
