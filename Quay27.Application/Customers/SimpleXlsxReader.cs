@@ -7,7 +7,7 @@ namespace Quay27.Application.Customers;
 
 internal static class SimpleXlsxReader
 {
-    internal sealed record ParsedRow(int RowNumber, string InvoiceCode, string TimeRaw, string CustomerRaw, string CreatorRaw, string TotalAmountRaw, string QuantityRaw);
+    internal sealed record ParsedRow(int RowNumber, string InvoiceCode, string TimeRaw, string CustomerRaw, string CreatorRaw, string DraftStaffRaw, string QuantityRaw);
 
     public static IReadOnlyList<ParsedRow> ReadMappedRows(byte[] fileBytes)
     {
@@ -62,7 +62,7 @@ internal static class SimpleXlsxReader
         const string timeCol = "B";
         const string customerCol = "C";
         const string creatorCol = "D";
-        const string totalAmountCol = "E";
+        const string draftStaffCol = "E";
         const string quantityCol = "F";
 
         var result = new List<ParsedRow>();
@@ -75,9 +75,9 @@ internal static class SimpleXlsxReader
             var time = GetCell(row, timeCol);
             var customer = GetCell(row, customerCol);
             var creator = GetCell(row, creatorCol);
-            var totalAmount = GetCell(row, totalAmountCol);
+            var draftStaff = GetCell(row, draftStaffCol);
             var quantity = GetCell(row, quantityCol);
-            result.Add(new ParsedRow(rowNo, invoice, time, customer, creator, totalAmount, quantity));
+            result.Add(new ParsedRow(rowNo, invoice, time, customer, creator, draftStaff, quantity));
         }
         return result;
     }
@@ -157,7 +157,7 @@ internal static class SimpleXlsxReader
             ("B", "Thời gian"),
             ("C", "Khách hàng"),
             ("D", "Người tạo"),
-            ("E", "Tổng tiền hàng"),
+            ("E", "NV Soạn"),
             ("F", "Số lượng"),
         };
 

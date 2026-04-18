@@ -47,11 +47,6 @@ public class CustomerRepository : ICustomerRepository
         if (queueId is not null)
         {
             query = query.Where(c => c.CustomerQueues.Any(cq => cq.QueueId == queueId));
-            if (queueId == SchemaConstants.Quay27QueueId)
-            {
-                var limitDate = DateTime.UtcNow.AddDays(-30);
-                query = query.Where(c => c.BillCreatedAt >= limitDate);
-            }
         }
 
         if (pendingExport27)

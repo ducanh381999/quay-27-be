@@ -125,9 +125,9 @@ public class CustomerService : ICustomerService
                 billCreatedAt,
                 row.CustomerRaw.Trim(),
                 row.CreatorRaw.Trim(),
-                string.Empty, // DraftStaff
+                row.DraftStaffRaw.Trim(), // DraftStaff
                 row.QuantityRaw, // Quantity
-                row.TotalAmountRaw, // TotalAmount
+                string.Empty, // TotalAmount
                 string.Empty, // InstallStaffCm
                 false,        // ManagerApproved
                 false,        // Kio27Received
