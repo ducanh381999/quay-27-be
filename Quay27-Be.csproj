@@ -11,6 +11,7 @@
     <Compile Remove="Quay27.Application\**\*.cs" />
     <Compile Remove="Quay27.Domain\**\*.cs" />
     <Compile Remove="Quay27.Infrastructure\**\*.cs" />
+    <Compile Remove="Quay27.Products.Tests\**\*.cs" />
   </ItemGroup>
 
   <ItemGroup>

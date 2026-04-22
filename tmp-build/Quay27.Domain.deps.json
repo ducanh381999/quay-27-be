@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "Quay27.Domain/1.0.0": {
+        "runtime": {
+          "Quay27.Domain.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Quay27.Domain/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

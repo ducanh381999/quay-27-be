@@ -15,6 +15,9 @@ public static class DependencyInjection
         services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ICustomerService, CustomerService>();
+        services.AddScoped<ICustomerGroupService, CustomerGroupService>();
+        services.AddScoped<ICustomerProfileService, CustomerProfileService>();
+        services.AddScoped<IProductService, ProductService>();
         services.AddScoped<IQueueService, QueueService>();
         services.AddScoped<IUserAdminService, UserAdminService>();
         services.AddScoped<ICustomerColumnPermissionService, CustomerColumnPermissionService>();

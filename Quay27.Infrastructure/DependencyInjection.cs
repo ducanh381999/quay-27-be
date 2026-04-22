@@ -22,7 +22,7 @@ public static class DependencyInjection
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseMySql(
                 connectionString,
-                ServerVersion.AutoDetect(connectionString),
+                serverVersion,
                 mysqlOptions =>
                 {
                     mysqlOptions.EnableRetryOnFailure(
@@ -38,6 +38,12 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IColumnPermissionRepository, ColumnPermissionRepository>();
         services.AddScoped<ICustomerRepository, CustomerRepository>();
+        services.AddScoped<ICustomerGroupRepository, CustomerGroupRepository>();
+        services.AddScoped<ICustomerProfileRepository, CustomerProfileRepository>();
+        services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<IProductGroupRepository, ProductGroupRepository>();
+        services.AddScoped<IPriceListRepository, PriceListRepository>();
+        services.AddScoped<IPriceListItemRepository, PriceListItemRepository>();
         services.AddScoped<IQueueRepository, QueueRepository>();
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
         services.AddScoped<ICustomerQueueRepository, CustomerQueueRepository>();
