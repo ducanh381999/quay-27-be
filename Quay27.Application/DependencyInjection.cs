@@ -18,6 +18,7 @@ public static class DependencyInjection
         services.AddScoped<ICustomerGroupService, CustomerGroupService>();
         services.AddScoped<ICustomerProfileService, CustomerProfileService>();
         services.AddScoped<IProductService, ProductService>();
+        services.AddScoped<IProductUploadService, ProductUploadService>();
         services.AddScoped<IQueueService, QueueService>();
         services.AddScoped<IUserAdminService, UserAdminService>();
         services.AddScoped<ICustomerColumnPermissionService, CustomerColumnPermissionService>();

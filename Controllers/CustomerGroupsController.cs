@@ -27,6 +27,14 @@ public class CustomerGroupsController : ControllerBase
         return Ok(items);
     }
 
+    [HttpGet("tree")]
+    [ProducesResponseType(typeof(IReadOnlyList<CustomerGroupTreeDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<CustomerGroupTreeDto>>> ListTree(CancellationToken cancellationToken)
+    {
+        var items = await _service.ListTreeAsync(cancellationToken);
+        return Ok(items);
+    }
+
     [HttpPost]
     [ProducesResponseType(typeof(CustomerGroupDto), StatusCodes.Status201Created)]
     public async Task<ActionResult<CustomerGroupDto>> Create(

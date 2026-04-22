@@ -27,5 +27,10 @@ public class UpsertProductRequestValidator : AbstractValidator<UpsertProductRequ
         RuleFor(x => x.InvoiceNoteTemplate).MaximumLength(4000);
         RuleFor(x => x.WeightUnit).NotEmpty().Must(x => x is "g" or "kg");
         RuleFor(x => x.WeightValue).GreaterThanOrEqualTo(0);
+        RuleForEach(x => x.UploadedImageAssets).ChildRules(asset =>
+        {
+            asset.RuleFor(x => x.AssetId).NotEmpty().MaximumLength(128);
+            asset.RuleFor(x => x.Url).NotEmpty().MaximumLength(1024);
+        });
     }
 }

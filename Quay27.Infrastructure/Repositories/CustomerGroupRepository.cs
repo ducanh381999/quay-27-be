@@ -30,6 +30,12 @@ public class CustomerGroupRepository : ICustomerGroupRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<CustomerGroup>> ListAllAsync(CancellationToken cancellationToken = default) =>
+        await _db.CustomerGroups.AsNoTracking()
+            .Where(x => !x.IsDeleted)
+            .OrderBy(x => x.Name)
+            .ToListAsync(cancellationToken);
+
     public Task<CustomerGroup?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         _db.CustomerGroups.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
 

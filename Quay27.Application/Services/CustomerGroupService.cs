@@ -31,6 +31,20 @@ public class CustomerGroupService : ICustomerGroupService
         return items.Select(Map).ToList();
     }
 
+    public async Task<IReadOnlyList<CustomerGroupTreeDto>> ListTreeAsync(CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        var items = await _groups.ListAllAsync(cancellationToken);
+        return items
+            .Select(x => new CustomerGroupTreeDto
+            {
+                Id = x.Id,
+                Name = x.Name,
+                Children = Array.Empty<CustomerGroupTreeDto>()
+            })
+            .ToList();
+    }
+
     public async Task<CustomerGroupDto> CreateAsync(
         CreateCustomerGroupRequest request,
         CancellationToken cancellationToken = default)

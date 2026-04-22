@@ -49,6 +49,9 @@ public sealed class PriceListItemsQuery
     public string? Search { get; set; }
     public string? GroupId { get; set; }
     public string? Stock { get; set; }
+    public string? PriceOperator { get; set; }
+    public string? ComparePrice { get; set; }
+    public decimal? CompareValue { get; set; }
 }
 
 public sealed class PriceListItemDto
@@ -64,10 +67,37 @@ public sealed class PriceListItemDto
 public sealed class AddProductsByGroupsRequest
 {
     public IReadOnlyList<string> GroupIds { get; set; } = Array.Empty<string>();
+    public bool IncludeDescendants { get; set; } = true;
+}
+
+public sealed class AddAllProductsRequest
+{
+    public bool Confirmed { get; set; }
 }
 
 public sealed class ApplyPriceFormulaRequest
 {
     public string ApplyTo { get; set; } = "all";
     public Guid? ProductId { get; set; }
+}
+
+public sealed class PriceListImportRequest
+{
+    public byte[] FileBytes { get; set; } = Array.Empty<byte>();
+    public string FileName { get; set; } = string.Empty;
+}
+
+public sealed class PriceListImportResult
+{
+    public int TotalRows { get; set; }
+    public int SuccessfulRows { get; set; }
+    public int FailedRows { get; set; }
+    public IReadOnlyList<PriceListImportError> Errors { get; set; } = Array.Empty<PriceListImportError>();
+}
+
+public sealed class PriceListImportError
+{
+    public int RowNumber { get; set; }
+    public string? Field { get; set; }
+    public string Message { get; set; } = string.Empty;
 }

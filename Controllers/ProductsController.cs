@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Quay27.Application.Abstractions;
 using Quay27.Application.Products;
@@ -10,11 +11,18 @@ namespace Quay27_Be.Controllers;
 [Route("api/[controller]")]
 public class ProductsController : ControllerBase
 {
-    private readonly IProductService _service;
+    public sealed class ImportPriceListForm
+    {
+        public IFormFile? File { get; set; }
+    }
 
-    public ProductsController(IProductService service)
+    private readonly IProductService _service;
+    private readonly IWebHostEnvironment _environment;
+
+    public ProductsController(IProductService service, IWebHostEnvironment environment)
     {
         _service = service;
+        _environment = environment;
     }
 
     [HttpGet]
@@ -147,20 +155,29 @@ public class ProductsController : ControllerBase
         [FromQuery] string? search,
         [FromQuery] string? groupId,
         [FromQuery] string? stock,
+        [FromQuery] string? priceOperator,
+        [FromQuery] string? comparePrice,
+        [FromQuery] decimal? compareValue,
         CancellationToken cancellationToken)
         => Ok(await _service.ListPriceListItemsAsync(new PriceListItemsQuery
         {
             PriceListIds = priceListIds,
             Search = search,
             GroupId = groupId,
-            Stock = stock
+            Stock = stock,
+            PriceOperator = priceOperator,
+            ComparePrice = comparePrice,
+            CompareValue = compareValue
         }, cancellationToken));
 
     [HttpPost("price-lists/{id:guid}/items/add-all")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> AddAllProductsToPriceList(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> AddAllProductsToPriceList(
+        Guid id,
+        [FromBody] AddAllProductsRequest? request,
+        CancellationToken cancellationToken)
     {
-        await _service.AddAllProductsToPriceListAsync(id, cancellationToken);
+        await _service.AddAllProductsToPriceListAsync(id, request?.Confirmed == true, cancellationToken);
         return NoContent();
     }
 
@@ -184,5 +201,69 @@ public class ProductsController : ControllerBase
     {
         await _service.ApplyPriceFormulaAsync(id, request, cancellationToken);
         return NoContent();
+    }
+
+    [HttpGet("price-lists/import/template")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DownloadPriceListImportTemplate(CancellationToken cancellationToken)
+    {
+        var templatePath = Path.Combine(_environment.ContentRootPath, "Templates", "MauFileBangGia.xlsx");
+        if (!System.IO.File.Exists(templatePath))
+            return NotFound(new { title = "Template not found", detail = "Không tìm thấy file template bảng giá." });
+
+        var bytes = await System.IO.File.ReadAllBytesAsync(templatePath, cancellationToken);
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "MauFileBangGia.xlsx");
+    }
+
+    [HttpPost("price-lists/import")]
+    [ProducesResponseType(typeof(PriceListImportResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [RequestSizeLimit(20 * 1024 * 1024)]
+    public async Task<ActionResult<PriceListImportResult>> ImportPriceLists(
+        [FromForm] ImportPriceListForm form,
+        CancellationToken cancellationToken)
+    {
+        if (form.File is null || form.File.Length == 0)
+            return BadRequest(new { title = "Invalid file", detail = "Vui lòng chọn file Excel hợp lệ." });
+
+        await using var ms = new MemoryStream();
+        await form.File.CopyToAsync(ms, cancellationToken);
+        var result = await _service.ImportPriceListAsync(new PriceListImportRequest
+        {
+            FileBytes = ms.ToArray(),
+            FileName = form.File.FileName
+        }, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("price-lists/export")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> ExportPriceLists(
+        [FromQuery] List<Guid> priceListIds,
+        [FromQuery] string? search,
+        [FromQuery] string? groupId,
+        [FromQuery] string? stock,
+        [FromQuery] string? priceOperator,
+        [FromQuery] string? comparePrice,
+        [FromQuery] decimal? compareValue,
+        CancellationToken cancellationToken)
+    {
+        var bytes = await _service.ExportPriceListAsync(new PriceListItemsQuery
+        {
+            PriceListIds = priceListIds,
+            Search = search,
+            GroupId = groupId,
+            Stock = stock,
+            PriceOperator = priceOperator,
+            ComparePrice = comparePrice,
+            CompareValue = compareValue
+        }, cancellationToken);
+
+        if (bytes is null || bytes.Length == 0)
+            return NoContent();
+
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"BangGia_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
     }
 }

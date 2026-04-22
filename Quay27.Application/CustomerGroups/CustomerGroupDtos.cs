@@ -9,6 +9,13 @@ public sealed class CustomerGroupDto
     public DateTime? UpdatedDate { get; init; }
 }
 
+public sealed class CustomerGroupTreeDto
+{
+    public Guid Id { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public IReadOnlyList<CustomerGroupTreeDto> Children { get; init; } = Array.Empty<CustomerGroupTreeDto>();
+}
+
 public sealed class CreateCustomerGroupRequest
 {
     public string Name { get; set; } = string.Empty;

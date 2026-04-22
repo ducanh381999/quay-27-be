@@ -74,7 +74,14 @@ public sealed class UpsertProductRequest
     public string? InvoiceNoteTemplate { get; set; }
     public bool DirectSale { get; set; }
     public IReadOnlyList<string> Images { get; set; } = Array.Empty<string>();
+    public IReadOnlyList<UploadedImageReferenceDto> UploadedImageAssets { get; set; } = Array.Empty<UploadedImageReferenceDto>();
     public IReadOnlyList<ProductComboComponentDto> ComboComponents { get; set; } = Array.Empty<ProductComboComponentDto>();
+}
+
+public sealed class UploadedImageReferenceDto
+{
+    public string AssetId { get; set; } = "";
+    public string Url { get; set; } = "";
 }
 
 public sealed class UpdateProductStatusRequest

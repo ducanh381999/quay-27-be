@@ -2,6 +2,7 @@ using Quay27.Application.Abstractions;
 using Quay27.Application.Common.Exceptions;
 using Quay27.Application.Products;
 using Quay27.Application.Repositories;
+using ClosedXML.Excel;
 using Quay27.Domain.Entities;
 using System.Text.Json;
 
@@ -75,7 +76,7 @@ public class ProductService : IProductService
             DescriptionRichText = NormalizeNull(request.DescriptionRichText),
             InvoiceNoteTemplate = NormalizeNull(request.InvoiceNoteTemplate),
             WeightKg = ToWeightKg(request.WeightValue, request.WeightUnit),
-            ImageUrl = request.Images.FirstOrDefault(),
+            ImageUrl = request.UploadedImageAssets.FirstOrDefault()?.Url ?? request.Images.FirstOrDefault(),
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -111,7 +112,7 @@ public class ProductService : IProductService
         item.DescriptionRichText = NormalizeNull(request.DescriptionRichText);
         item.InvoiceNoteTemplate = NormalizeNull(request.InvoiceNoteTemplate);
         item.WeightKg = ToWeightKg(request.WeightValue, request.WeightUnit);
-        item.ImageUrl = request.Images.FirstOrDefault();
+        item.ImageUrl = request.UploadedImageAssets.FirstOrDefault()?.Url ?? request.Images.FirstOrDefault();
         item.UpdatedAt = DateTimeOffset.UtcNow;
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -212,6 +213,7 @@ public class ProductService : IProductService
     public async Task<ProductGroupDto> CreateGroupAsync(CreateProductGroupRequest request, CancellationToken cancellationToken = default)
     {
         EnsureAuthenticated();
+        EnsureCanManagePriceListActions();
         var existing = await _groups.GetByNameAsync(request.Name, cancellationToken);
         if (existing is not null) return new ProductGroupDto { Id = existing.Id, Name = existing.Name };
 
@@ -220,6 +222,7 @@ public class ProductService : IProductService
         {
             parent = await _groups.GetTrackedByIdAsync(request.ParentId.Value, cancellationToken);
             if (parent is null) throw new NotFoundException("Parent product group not found.");
+            if (parent.IsDeleted) throw new ConflictException("Parent product group is inactive.");
         }
 
         var group = new ProductGroup
@@ -324,7 +327,7 @@ public class ProductService : IProductService
             query.Stock,
             cancellationToken);
 
-        return items
+        var result = items
             .Where(x => x.Product != null)
             .GroupBy(x => x.ProductId)
             .Select(group =>
@@ -345,15 +348,47 @@ public class ProductService : IProductService
             })
             .OrderBy(x => x.ProductName)
             .ToList();
+        if (query.PriceOperator is "lt" or "lte" or "eq" or "gt" or "gte"
+            && query.ComparePrice is "costPrice" or "lastImportPrice"
+            && query.CompareValue.HasValue)
+        {
+            result = result.Where(item =>
+            {
+                var compareBase = query.ComparePrice == "costPrice" ? item.CostPrice : item.LastImportPrice;
+                var selectedPrice = item.PricesByListId.TryGetValue(query.PriceListIds[0].ToString(), out var value)
+                    ? value
+                    : item.PricesByListId.Values.FirstOrDefault();
+                var delta = selectedPrice - compareBase;
+                return query.PriceOperator switch
+                {
+                    "lt" => delta < query.CompareValue.Value,
+                    "lte" => delta <= query.CompareValue.Value,
+                    "eq" => delta == query.CompareValue.Value,
+                    "gt" => delta > query.CompareValue.Value,
+                    "gte" => delta >= query.CompareValue.Value,
+                    _ => true
+                };
+            }).ToList();
+        }
+        return result;
     }
 
     public async Task AddAllProductsToPriceListAsync(
         Guid priceListId,
+        bool confirmed,
         CancellationToken cancellationToken = default)
     {
         EnsureAuthenticated();
         var list = await _priceLists.GetByIdAsync(priceListId, cancellationToken);
         if (list is null) throw new NotFoundException("Price list not found.");
+        var existingItems = await _priceListItems.ListByPriceListIdsAsync(
+            [priceListId],
+            null,
+            null,
+            null,
+            cancellationToken);
+        if (existingItems.Count == 0 && !confirmed)
+            throw new ConflictException("Confirmation required before adding all products to an empty price list.");
 
         var products = await _products.ListAllActiveAsync(cancellationToken);
         await UpsertPriceListItemsByFormulaAsync(list, products, cancellationToken);
@@ -374,9 +409,35 @@ public class ProductService : IProductService
             .Distinct()
             .ToList();
         if (groupIds.Count == 0) return;
+        if (request.IncludeDescendants)
+        {
+            var allGroups = await _groups.ListAsync(cancellationToken);
+            groupIds = ExpandDescendantGroupIds(allGroups, groupIds);
+        }
 
         var products = await _products.ListByGroupIdsAsync(groupIds, cancellationToken);
         await UpsertPriceListItemsByFormulaAsync(list, products, cancellationToken);
+    }
+
+    private static List<Guid> ExpandDescendantGroupIds(IReadOnlyList<ProductGroup> groups, IReadOnlyList<Guid> selected)
+    {
+        var childrenMap = groups
+            .Where(g => g.ParentId.HasValue)
+            .GroupBy(g => g.ParentId!.Value)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.Id).ToList());
+        var expanded = new HashSet<Guid>(selected);
+        var stack = new Stack<Guid>(selected);
+        while (stack.Count > 0)
+        {
+            var parent = stack.Pop();
+            if (!childrenMap.TryGetValue(parent, out var children))
+                continue;
+
+            foreach (var child in children.Where(expanded.Add))
+                stack.Push(child);
+        }
+
+        return expanded.ToList();
     }
 
     public async Task ApplyPriceFormulaAsync(
@@ -400,6 +461,162 @@ public class ProductService : IProductService
         }
 
         await UpsertPriceListItemsByFormulaAsync(list, products, cancellationToken);
+    }
+
+    public async Task<PriceListImportResult> ImportPriceListAsync(
+        PriceListImportRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        EnsureCanManagePriceListActions();
+
+        if (request.FileBytes.Length == 0)
+            throw new ConflictException("Import file is empty.");
+
+        using var workbook = new XLWorkbook(new MemoryStream(request.FileBytes));
+        var worksheet = workbook.Worksheets.FirstOrDefault();
+        if (worksheet is null)
+            throw new ConflictException("Template does not contain worksheet.");
+
+        var headerMap = BuildHeaderMap(worksheet);
+        if (!headerMap.TryGetValue("productcode", out var productCodeCol)
+            || !headerMap.TryGetValue("pricelistname", out var priceListNameCol)
+            || !headerMap.TryGetValue("price", out var priceCol))
+        {
+            throw new ConflictException("Template headers are invalid.");
+        }
+
+        var totalRows = 0;
+        var successfulRows = 0;
+        var failedRows = 0;
+        var errors = new List<PriceListImportError>();
+        var now = DateTimeOffset.UtcNow;
+
+        foreach (var row in worksheet.RowsUsed().Skip(1))
+        {
+            totalRows++;
+            var rowNumber = row.RowNumber();
+            var productCode = row.Cell(productCodeCol).GetString().Trim();
+            var priceListName = row.Cell(priceListNameCol).GetString().Trim();
+            var priceRaw = row.Cell(priceCol).GetString().Trim();
+
+            if (string.IsNullOrWhiteSpace(productCode) || string.IsNullOrWhiteSpace(priceListName))
+            {
+                failedRows++;
+                errors.Add(new PriceListImportError
+                {
+                    RowNumber = rowNumber,
+                    Field = "productCode|priceListName",
+                    Message = "Product code and price list name are required."
+                });
+                continue;
+            }
+
+            if (!decimal.TryParse(priceRaw, out var price))
+            {
+                failedRows++;
+                errors.Add(new PriceListImportError
+                {
+                    RowNumber = rowNumber,
+                    Field = "price",
+                    Message = "Price must be a number."
+                });
+                continue;
+            }
+
+            var products = await _products.ListAsync(new ProductQuery
+            {
+                Search = productCode,
+                Page = 1,
+                PageSize = 100
+            }, cancellationToken);
+            var product = products.Items.FirstOrDefault(x => string.Equals(x.Code, productCode, StringComparison.OrdinalIgnoreCase));
+            var priceLists = await _priceLists.ListAsync(priceListName, cancellationToken);
+            var priceList = priceLists.FirstOrDefault(x => string.Equals(x.Name, priceListName, StringComparison.OrdinalIgnoreCase));
+
+            if (product is null || priceList is null)
+            {
+                failedRows++;
+                errors.Add(new PriceListImportError
+                {
+                    RowNumber = rowNumber,
+                    Message = product is null
+                        ? $"Product code '{productCode}' not found."
+                        : $"Price list '{priceListName}' not found."
+                });
+                continue;
+            }
+
+            var existing = await _priceListItems.GetTrackedAsync(priceList.Id, product.Id, cancellationToken);
+            if (existing is null)
+            {
+                await _priceListItems.AddRangeAsync(new[]
+                {
+                    new PriceListItem
+                    {
+                        Id = Guid.NewGuid(),
+                        PriceListId = priceList.Id,
+                        ProductId = product.Id,
+                        Price = price,
+                        AppliedByFormula = false,
+                        CreatedAt = now
+                    }
+                }, cancellationToken);
+            }
+            else
+            {
+                existing.Price = price;
+                existing.AppliedByFormula = false;
+                existing.UpdatedAt = now;
+            }
+
+            successfulRows++;
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new PriceListImportResult
+        {
+            TotalRows = totalRows,
+            SuccessfulRows = successfulRows,
+            FailedRows = failedRows,
+            Errors = errors
+        };
+    }
+
+    public async Task<byte[]?> ExportPriceListAsync(
+        PriceListItemsQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        EnsureCanManagePriceListActions();
+
+        var items = await ListPriceListItemsAsync(query, cancellationToken);
+        if (items.Count == 0) return null;
+
+        using var workbook = new XLWorkbook();
+        var ws = workbook.Worksheets.Add("PriceListExport");
+        ws.Cell(1, 1).Value = "Mã hàng";
+        ws.Cell(1, 2).Value = "Tên hàng";
+        ws.Cell(1, 3).Value = "Giá vốn";
+        ws.Cell(1, 4).Value = "Giá nhập cuối";
+        ws.Cell(1, 5).Value = "Giá theo bảng";
+
+        for (var i = 0; i < items.Count; i++)
+        {
+            var row = i + 2;
+            var item = items[i];
+            ws.Cell(row, 1).Value = item.ProductCode;
+            ws.Cell(row, 2).Value = item.ProductName;
+            ws.Cell(row, 3).Value = item.CostPrice;
+            ws.Cell(row, 4).Value = item.LastImportPrice;
+            ws.Cell(row, 5).Value = item.PricesByListId.Values.FirstOrDefault();
+        }
+
+        ws.Columns().AdjustToContents();
+        using var ms = new MemoryStream();
+        workbook.SaveAs(ms);
+        return ms.ToArray();
     }
 
     private async Task UpsertPriceListItemsByFormulaAsync(
@@ -441,6 +658,35 @@ public class ProductService : IProductService
     {
         if (!_currentUser.IsAuthenticated || _currentUser.UserId is null)
             throw new ForbiddenException("Authentication required.");
+    }
+
+    private void EnsureCanManagePriceListActions()
+    {
+        if (_currentUser.IsAdmin)
+            return;
+
+        var allowedRoles = new[] { "admin", "product_manager", "price_settings_manager" };
+        if (_currentUser.Roles.Any(role => allowedRoles.Contains(role, StringComparer.OrdinalIgnoreCase)))
+            return;
+
+        throw new ForbiddenException("No permission to perform this action.");
+    }
+
+    private static Dictionary<string, int> BuildHeaderMap(IXLWorksheet worksheet)
+    {
+        var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var cell in worksheet.Row(1).CellsUsed())
+        {
+            var key = cell.GetString().Trim().Replace(" ", string.Empty).ToLowerInvariant();
+            if (key is "mãhàng" or "mahang")
+                map["productcode"] = cell.Address.ColumnNumber;
+            else if (key is "tênbảnggiá" or "tenbanggia" or "banggia")
+                map["pricelistname"] = cell.Address.ColumnNumber;
+            else if (key is "giá" or "gia" or "price")
+                map["price"] = cell.Address.ColumnNumber;
+        }
+
+        return map;
     }
 
     private async Task<string> ResolveCodeAsync(string? requestedCode, Guid? excludeId, CancellationToken cancellationToken)

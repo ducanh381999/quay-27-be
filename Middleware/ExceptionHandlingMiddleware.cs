@@ -61,6 +61,12 @@ public class ExceptionHandlingMiddleware
                 Detail = ce.Message,
                 Status = (int)HttpStatusCode.Conflict
             },
+            AppValidationException ave => new ProblemDetails
+            {
+                Title = "Validation Failed",
+                Detail = ave.Message,
+                Status = (int)HttpStatusCode.BadRequest
+            },
             ValidationException ve => new ProblemDetails
             {
                 Title = "Validation Failed",

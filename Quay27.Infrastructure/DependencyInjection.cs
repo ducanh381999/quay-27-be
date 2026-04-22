@@ -7,6 +7,7 @@ using Quay27.Application.Repositories;
 using Quay27.Infrastructure.Persistence;
 using Quay27.Infrastructure.Repositories;
 using Quay27.Infrastructure.Services;
+using Quay27.Infrastructure.Storage;
 
 namespace Quay27.Infrastructure;
 
@@ -51,6 +52,9 @@ public static class DependencyInjection
         services.AddScoped<ICustomerVersionRepository, CustomerVersionRepository>();
         services.AddScoped<ISheetPickerDraftStaffNameRepository, SheetPickerDraftStaffNameRepository>();
         services.AddScoped<IEndOfDayService, EndOfDayService>();
+        services.AddOptions<R2StorageOptions>()
+            .Bind(configuration.GetSection(R2StorageOptions.SectionName));
+        services.AddScoped<IObjectStorageClient, R2ObjectStorageClient>();
 
         return services;
     }
