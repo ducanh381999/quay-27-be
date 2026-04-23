@@ -1,0 +1,27 @@
+name: Deploy Backend Dev
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: Dev
+
+    steps:
+      - name: SSH Deploy Backend Dev
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST_DEV }}
+          username: ${{ secrets.VPS_USER_DEV }}
+          key: ${{ secrets.VPS_SSH_KEY_DEV }}
+          script: |
+            cd /opt/quay27/quay-27-be
+            git checkout dev
+            git pull origin dev
+
+            cd /opt/quay27
+            docker compose build quay27-be
+            docker compose up -d quay27-be
