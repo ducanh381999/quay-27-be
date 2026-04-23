@@ -74,9 +74,7 @@ public sealed class R2ObjectStorageClient : IObjectStorageClient
 
             throw new UpstreamDependencyException(
                 "Image upload failed because secure connection to object storage could not be established.",
-                dependencyName: "r2-storage",
-                failureCategory: "handshake",
-                isRetryable: false,
+                errorCode: "r2_storage_handshake_failure",
                 innerException: ex);
         }
         catch (Exception ex)
@@ -89,9 +87,7 @@ public sealed class R2ObjectStorageClient : IObjectStorageClient
 
             throw new UpstreamDependencyException(
                 "Image upload failed because object storage is currently unavailable.",
-                dependencyName: "r2-storage",
-                failureCategory: "connectivity",
-                isRetryable: true,
+                errorCode: "r2_storage_connectivity_failure",
                 innerException: ex);
         }
 
