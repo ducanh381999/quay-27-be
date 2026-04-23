@@ -1,7 +1,11 @@
 using Amazon.S3;
 using Amazon.S3.Model;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Quay27.Application.Abstractions;
+using Quay27.Application.Common.Exceptions;
+using System.Security.Authentication;
 
 namespace Quay27.Infrastructure.Storage;
 
@@ -9,10 +13,19 @@ public sealed class R2ObjectStorageClient : IObjectStorageClient
 {
     private readonly R2StorageOptions _options;
     private readonly IAmazonS3 _s3Client;
+    private readonly ILogger<R2ObjectStorageClient> _logger;
 
     public R2ObjectStorageClient(IOptions<R2StorageOptions> options)
+        : this(options, NullLogger<R2ObjectStorageClient>.Instance)
+    {
+    }
+
+    public R2ObjectStorageClient(
+        IOptions<R2StorageOptions> options,
+        ILogger<R2ObjectStorageClient> logger)
     {
         _options = options.Value;
+        _logger = logger;
 
         var serviceUrl = $"https://{_options.AccountId}.r2.cloudflarestorage.com";
         var config = new AmazonS3Config
@@ -42,10 +55,45 @@ public sealed class R2ObjectStorageClient : IObjectStorageClient
             Key = objectKey,
             InputStream = request.Content,
             ContentType = request.ContentType,
-            AutoCloseStream = false
+            AutoCloseStream = false,
+            UseChunkEncoding = false,
+            DisablePayloadSigning = true
         };
 
-        await _s3Client.PutObjectAsync(putRequest, cancellationToken);
+        try
+        {
+            await _s3Client.PutObjectAsync(putRequest, cancellationToken);
+        }
+        catch (Exception ex) when (IsTlsHandshakeFailure(ex))
+        {
+            _logger.LogWarning(
+                ex,
+                "R2 upload failed due to TLS handshake issue for bucket {BucketName} and key {ObjectKey}.",
+                _options.BucketName,
+                objectKey);
+
+            throw new UpstreamDependencyException(
+                "Image upload failed because secure connection to object storage could not be established.",
+                dependencyName: "r2-storage",
+                failureCategory: "handshake",
+                isRetryable: false,
+                innerException: ex);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "R2 upload failed for bucket {BucketName} and key {ObjectKey}.",
+                _options.BucketName,
+                objectKey);
+
+            throw new UpstreamDependencyException(
+                "Image upload failed because object storage is currently unavailable.",
+                dependencyName: "r2-storage",
+                failureCategory: "connectivity",
+                isRetryable: true,
+                innerException: ex);
+        }
 
         var baseUrl = _options.PublicBaseUrl.TrimEnd('/');
         var publicUrl = $"{baseUrl}/{objectKey}";
@@ -56,5 +104,22 @@ public sealed class R2ObjectStorageClient : IObjectStorageClient
             publicUrl,
             request.ContentType,
             request.ContentLength);
+    }
+
+    private static bool IsTlsHandshakeFailure(Exception ex)
+    {
+        for (Exception? current = ex; current is not null; current = current.InnerException)
+        {
+            if (current is AuthenticationException)
+                return true;
+
+            if (current.Message.Contains("HandshakeFailure", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (current.Message.Contains("SSL connection could not be established", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 }

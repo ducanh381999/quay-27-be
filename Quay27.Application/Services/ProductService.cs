@@ -5,6 +5,7 @@ using Quay27.Application.Repositories;
 using ClosedXML.Excel;
 using Quay27.Domain.Entities;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace Quay27.Application.Services;
 
@@ -16,6 +17,7 @@ public class ProductService : IProductService
     private readonly IPriceListItemRepository _priceListItems;
     private readonly ICurrentUser _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<ProductService> _logger;
 
     public ProductService(
         IProductRepository products,
@@ -23,7 +25,8 @@ public class ProductService : IProductService
         IPriceListRepository priceLists,
         IPriceListItemRepository priceListItems,
         ICurrentUser currentUser,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ILogger<ProductService> logger)
     {
         _products = products;
         _groups = groups;
@@ -31,6 +34,7 @@ public class ProductService : IProductService
         _priceListItems = priceListItems;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<ProductListResponse> ListAsync(ProductQuery query, CancellationToken cancellationToken = default)
@@ -51,6 +55,11 @@ public class ProductService : IProductService
     public async Task<ProductListItemDto> CreateAsync(UpsertProductRequest request, CancellationToken cancellationToken = default)
     {
         EnsureAuthenticated();
+        var hasImageOperation = request.UploadedImageAssets.Count > 0 || request.Images.Count > 0;
+        _logger.LogInformation(
+            "product_save_attempt action=create user={UserId} hasImageOperation={HasImageOperation}",
+            _currentUser.UserId,
+            hasImageOperation);
         var code = await ResolveCodeAsync(request.Code, null, cancellationToken);
         await EnsureUniqueBarcodeAsync(request.Barcode, null, cancellationToken);
         var group = await ResolveGroupAsync(request.GroupName, cancellationToken);
@@ -82,13 +91,38 @@ public class ProductService : IProductService
         };
 
         await _products.AddAsync(entity, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "product_save_failure action=create user={UserId} hasImageOperation={HasImageOperation} cleanup_pending={CleanupPending}",
+                _currentUser.UserId,
+                hasImageOperation,
+                hasImageOperation);
+            throw;
+        }
+
+        _logger.LogInformation(
+            "product_save_success action=create productId={ProductId} user={UserId} hasImageOperation={HasImageOperation}",
+            entity.Id,
+            _currentUser.UserId,
+            hasImageOperation);
         return Map(entity, group);
     }
 
     public async Task<ProductListItemDto> UpdateAsync(Guid id, UpsertProductRequest request, CancellationToken cancellationToken = default)
     {
         EnsureAuthenticated();
+        var hasImageOperation = request.UploadedImageAssets.Count > 0 || request.Images.Count > 0;
+        _logger.LogInformation(
+            "product_save_attempt action=update productId={ProductId} user={UserId} hasImageOperation={HasImageOperation}",
+            id,
+            _currentUser.UserId,
+            hasImageOperation);
         var item = await _products.GetTrackedByIdAsync(id, cancellationToken);
         if (item is null) throw new NotFoundException("Product not found.");
         var code = await ResolveCodeAsync(request.Code, id, cancellationToken);
@@ -115,7 +149,27 @@ public class ProductService : IProductService
         item.ImageUrl = request.UploadedImageAssets.FirstOrDefault()?.Url ?? request.Images.FirstOrDefault();
         item.UpdatedAt = DateTimeOffset.UtcNow;
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "product_save_failure action=update productId={ProductId} user={UserId} hasImageOperation={HasImageOperation} cleanup_pending={CleanupPending}",
+                id,
+                _currentUser.UserId,
+                hasImageOperation,
+                hasImageOperation);
+            throw;
+        }
+
+        _logger.LogInformation(
+            "product_save_success action=update productId={ProductId} user={UserId} hasImageOperation={HasImageOperation}",
+            id,
+            _currentUser.UserId,
+            hasImageOperation);
         return Map(item, group);
     }
 

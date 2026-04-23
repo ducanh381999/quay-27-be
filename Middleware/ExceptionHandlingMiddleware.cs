@@ -32,7 +32,17 @@ public class ExceptionHandlingMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled exception");
+            if (ex is UpstreamDependencyException ude)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Upstream dependency exception. code={ErrorCode}",
+                    ude.ErrorCode);
+            }
+            else
+            {
+                _logger.LogError(ex, "Unhandled exception");
+            }
             await WriteProblemAsync(context, ex, _env);
         }
     }
@@ -73,6 +83,13 @@ public class ExceptionHandlingMiddleware
                 Detail = string.Join("; ", ve.Errors.Select(e => e.ErrorMessage)),
                 Status = (int)HttpStatusCode.BadRequest,
                 Extensions = { ["errors"] = ve.Errors.GroupBy(e => e.PropertyName).ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray()) }
+            },
+            UpstreamDependencyException ude => new ProblemDetails
+            {
+                Title = "Upstream Dependency Failed",
+                Detail = ude.Message,
+                Status = (int)HttpStatusCode.BadGateway,
+                Extensions = { ["errorCode"] = ude.ErrorCode }
             },
             _ => new ProblemDetails
             {

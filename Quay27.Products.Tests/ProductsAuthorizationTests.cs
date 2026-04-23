@@ -1,7 +1,9 @@
 using Quay27.Application.Abstractions;
 using Quay27.Application.Common.Exceptions;
+using Quay27.Application.Products;
 using Quay27.Application.Repositories;
 using Quay27.Application.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Quay27.Products.Tests;
 
@@ -16,10 +18,55 @@ public class ProductsAuthorizationTests
             new NoopPriceLists(),
             new NoopPriceListItems(),
             new FakeCurrentUser(isAuthenticated: false),
-            new NoopUnitOfWork());
+            new NoopUnitOfWork(),
+            NullLogger<ProductService>.Instance);
 
         await Assert.ThrowsAsync<ForbiddenException>(() => service.ExportPriceListAsync(new()));
     }
+
+    [Fact]
+    public async Task Should_require_authenticated_user_for_create()
+    {
+        var service = new ProductService(
+            new NoopProducts(),
+            new NoopGroups(),
+            new NoopPriceLists(),
+            new NoopPriceListItems(),
+            new FakeCurrentUser(isAuthenticated: false),
+            new NoopUnitOfWork(),
+            NullLogger<ProductService>.Instance);
+
+        await Assert.ThrowsAsync<ForbiddenException>(() => service.CreateAsync(BuildRequest()));
+    }
+
+    [Fact]
+    public async Task Should_require_authenticated_user_for_update()
+    {
+        var service = new ProductService(
+            new NoopProducts(),
+            new NoopGroups(),
+            new NoopPriceLists(),
+            new NoopPriceListItems(),
+            new FakeCurrentUser(isAuthenticated: false),
+            new NoopUnitOfWork(),
+            NullLogger<ProductService>.Instance);
+
+        await Assert.ThrowsAsync<ForbiddenException>(() => service.UpdateAsync(Guid.NewGuid(), BuildRequest()));
+    }
+
+    private static UpsertProductRequest BuildRequest() => new()
+    {
+        Name = "P",
+        ItemType = "goods",
+        CostPrice = 1,
+        SalePrice = 1,
+        Stock = 0,
+        MinStock = 0,
+        MaxStock = 0,
+        WeightValue = 0,
+        WeightUnit = "g",
+        DirectSale = true
+    };
 
     private sealed class FakeCurrentUser(bool isAuthenticated) : ICurrentUser
     {
