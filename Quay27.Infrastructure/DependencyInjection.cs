@@ -51,6 +51,8 @@ public static class DependencyInjection
         services.AddScoped<IDuplicateFlagRepository, DuplicateFlagRepository>();
         services.AddScoped<ICustomerVersionRepository, CustomerVersionRepository>();
         services.AddScoped<ISheetPickerDraftStaffNameRepository, SheetPickerDraftStaffNameRepository>();
+        services.AddScoped<ISupplierRepository, SupplierRepository>();
+        services.AddScoped<ISupplierGroupRepository, SupplierGroupRepository>();
         services.AddScoped<IEndOfDayService, EndOfDayService>();
         services.AddOptions<R2StorageOptions>()
             .Bind(configuration.GetSection(R2StorageOptions.SectionName));

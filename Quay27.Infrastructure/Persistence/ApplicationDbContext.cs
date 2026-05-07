@@ -27,6 +27,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<ProductGroup> ProductGroups => Set<ProductGroup>();
     public DbSet<PriceList> PriceLists => Set<PriceList>();
     public DbSet<PriceListItem> PriceListItems => Set<PriceListItem>();
+    public DbSet<Supplier> Suppliers => Set<Supplier>();
+    public DbSet<SupplierGroup> SupplierGroups => Set<SupplierGroup>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -248,6 +250,46 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.PriceListId, x.ProductId }).IsUnique();
             e.HasIndex(x => x.ProductId);
+        });
+
+        modelBuilder.Entity<SupplierGroup>(e =>
+        {
+            e.ToTable("SupplierGroups");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(256).IsRequired();
+            e.Property(x => x.Notes).HasColumnType("longtext");
+            e.Property(x => x.CreatedBy).HasMaxLength(256).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(256);
+            e.HasIndex(x => x.Name);
+        });
+
+        modelBuilder.Entity<Supplier>(e =>
+        {
+            e.ToTable("Suppliers");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(32).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(256).IsRequired();
+            e.Property(x => x.Phone).HasMaxLength(32);
+            e.Property(x => x.Email).HasMaxLength(256);
+            e.Property(x => x.Address).HasColumnType("longtext");
+            e.Property(x => x.Region).HasMaxLength(256);
+            e.Property(x => x.Ward).HasMaxLength(256);
+            e.Property(x => x.Notes).HasColumnType("longtext");
+            e.Property(x => x.CompanyName).HasMaxLength(256);
+            e.Property(x => x.TaxCode).HasMaxLength(32);
+            e.Property(x => x.InitialDebt).HasColumnType("decimal(18,2)");
+            e.Property(x => x.TotalPurchase).HasColumnType("decimal(18,2)");
+            e.Property(x => x.TotalReturn).HasColumnType("decimal(18,2)");
+            e.Property(x => x.CurrentDebt).HasColumnType("decimal(18,2)");
+            e.Property(x => x.CreatedBy).HasMaxLength(256).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(256);
+            e.HasIndex(x => x.Code).IsUnique();
+            e.HasIndex(x => x.Name);
+            e.HasIndex(x => x.Phone);
+            e.HasOne(x => x.SupplierGroup)
+                .WithMany(g => g.Suppliers)
+                .HasForeignKey(x => x.SupplierGroupId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

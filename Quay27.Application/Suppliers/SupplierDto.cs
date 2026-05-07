@@ -1,0 +1,25 @@
+namespace Quay27.Application.Suppliers;
+
+public record SupplierDto(
+    Guid Id,
+    string Code,
+    string Name,
+    string Phone,
+    string Email,
+    string Address,
+    string Region,
+    string Ward,
+    Guid? SupplierGroupId,
+    string? SupplierGroupName,
+    string Notes,
+    string CompanyName,
+    string TaxCode,
+    decimal InitialDebt,
+    decimal TotalPurchase,
+    decimal TotalReturn,
+    decimal CurrentDebt,
+    bool IsActive,
+    DateTime CreatedDate,
+    string CreatedBy,
+    DateTime? UpdatedDate,
+    string? UpdatedBy);

@@ -22,6 +22,8 @@ public static class DependencyInjection
         services.AddScoped<IQueueService, QueueService>();
         services.AddScoped<IUserAdminService, UserAdminService>();
         services.AddScoped<ICustomerColumnPermissionService, CustomerColumnPermissionService>();
+        services.AddScoped<ISupplierService, SupplierService>();
+        services.AddScoped<ISupplierGroupService, SupplierGroupService>();
         return services;
     }
 }
