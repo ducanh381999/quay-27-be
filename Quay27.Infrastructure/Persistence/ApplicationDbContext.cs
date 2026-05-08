@@ -29,6 +29,12 @@ public class ApplicationDbContext : DbContext
     public DbSet<PriceListItem> PriceListItems => Set<PriceListItem>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<SupplierGroup> SupplierGroups => Set<SupplierGroup>();
+    public DbSet<GoodsReceipt> GoodsReceipts => Set<GoodsReceipt>();
+    public DbSet<GoodsReceiptLine> GoodsReceiptLines => Set<GoodsReceiptLine>();
+    public DbSet<ReturnReceipt> ReturnReceipts => Set<ReturnReceipt>();
+    public DbSet<ReturnReceiptLine> ReturnReceiptLines => Set<ReturnReceiptLine>();
+    public DbSet<SupplierPaymentAllocation> SupplierPaymentAllocations => Set<SupplierPaymentAllocation>();
+    public DbSet<ReceivingAccount> ReceivingAccounts => Set<ReceivingAccount>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -289,6 +295,127 @@ public class ApplicationDbContext : DbContext
             e.HasOne(x => x.SupplierGroup)
                 .WithMany(g => g.Suppliers)
                 .HasForeignKey(x => x.SupplierGroupId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ReceivingAccount>(e =>
+        {
+            e.ToTable("ReceivingAccounts");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(256).IsRequired();
+            e.Property(x => x.AccountNumber).HasMaxLength(64).IsRequired();
+            e.Property(x => x.BankName).HasMaxLength(256);
+            e.Property(x => x.CreatedBy).HasMaxLength(256).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(256);
+            e.HasIndex(x => new { x.Name, x.AccountNumber });
+        });
+
+        modelBuilder.Entity<GoodsReceipt>(e =>
+        {
+            e.ToTable("GoodsReceipts");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(32).IsRequired();
+            e.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            e.Property(x => x.Subtotal).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Discount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Total).HasColumnType("decimal(18,2)");
+            e.Property(x => x.PaidAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.SupplierDebtDelta).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Notes).HasColumnType("longtext");
+            e.Property(x => x.CreatedBy).HasMaxLength(256).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(256);
+            e.HasIndex(x => x.Code).IsUnique();
+            e.HasIndex(x => x.ReceiptDate);
+            e.HasIndex(x => x.Status);
+            e.HasOne(x => x.Supplier)
+                .WithMany()
+                .HasForeignKey(x => x.SupplierId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<GoodsReceiptLine>(e =>
+        {
+            e.ToTable("GoodsReceiptLines");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.ProductCodeSnapshot).HasMaxLength(64).IsRequired();
+            e.Property(x => x.ProductNameSnapshot).HasMaxLength(256).IsRequired();
+            e.Property(x => x.UnitSnapshot).HasMaxLength(64);
+            e.Property(x => x.Quantity).HasColumnType("decimal(18,2)");
+            e.Property(x => x.UnitPrice).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Discount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.LineTotal).HasColumnType("decimal(18,2)");
+            e.HasOne(x => x.GoodsReceipt)
+                .WithMany(x => x.Lines)
+                .HasForeignKey(x => x.GoodsReceiptId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Product)
+                .WithMany()
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ReturnReceipt>(e =>
+        {
+            e.ToTable("ReturnReceipts");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(32).IsRequired();
+            e.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            e.Property(x => x.Subtotal).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Discount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Total).HasColumnType("decimal(18,2)");
+            e.Property(x => x.SupplierPaidAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.SupplierDebtDelta).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Notes).HasColumnType("longtext");
+            e.Property(x => x.CreatedBy).HasMaxLength(256).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(256);
+            e.HasIndex(x => x.Code).IsUnique();
+            e.HasIndex(x => x.ReturnDate);
+            e.HasIndex(x => x.Status);
+            e.HasOne(x => x.Supplier)
+                .WithMany()
+                .HasForeignKey(x => x.SupplierId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ReturnReceiptLine>(e =>
+        {
+            e.ToTable("ReturnReceiptLines");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.ProductCodeSnapshot).HasMaxLength(64).IsRequired();
+            e.Property(x => x.ProductNameSnapshot).HasMaxLength(256).IsRequired();
+            e.Property(x => x.UnitSnapshot).HasMaxLength(64);
+            e.Property(x => x.Quantity).HasColumnType("decimal(18,2)");
+            e.Property(x => x.ImportPrice).HasColumnType("decimal(18,2)");
+            e.Property(x => x.ReturnPrice).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Discount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.LineTotal).HasColumnType("decimal(18,2)");
+            e.HasOne(x => x.ReturnReceipt)
+                .WithMany(x => x.Lines)
+                .HasForeignKey(x => x.ReturnReceiptId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Product)
+                .WithMany()
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SupplierPaymentAllocation>(e =>
+        {
+            e.ToTable("SupplierPaymentAllocations");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.PaymentMethod).HasMaxLength(32).IsRequired();
+            e.Property(x => x.Amount).HasColumnType("decimal(18,2)");
+            e.HasOne(x => x.GoodsReceipt)
+                .WithMany(x => x.PaymentAllocations)
+                .HasForeignKey(x => x.GoodsReceiptId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.ReturnReceipt)
+                .WithMany(x => x.PaymentAllocations)
+                .HasForeignKey(x => x.ReturnReceiptId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.ReceivingAccount)
+                .WithMany()
+                .HasForeignKey(x => x.ReceivingAccountId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }

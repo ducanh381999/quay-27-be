@@ -53,6 +53,9 @@ public static class DependencyInjection
         services.AddScoped<ISheetPickerDraftStaffNameRepository, SheetPickerDraftStaffNameRepository>();
         services.AddScoped<ISupplierRepository, SupplierRepository>();
         services.AddScoped<ISupplierGroupRepository, SupplierGroupRepository>();
+        services.AddScoped<IGoodsReceiptRepository, GoodsReceiptRepository>();
+        services.AddScoped<IReturnReceiptRepository, ReturnReceiptRepository>();
+        services.AddScoped<IReceivingAccountRepository, ReceivingAccountRepository>();
         services.AddScoped<IEndOfDayService, EndOfDayService>();
         services.AddOptions<R2StorageOptions>()
             .Bind(configuration.GetSection(R2StorageOptions.SectionName));

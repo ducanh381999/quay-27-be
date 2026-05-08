@@ -24,6 +24,9 @@ public static class DependencyInjection
         services.AddScoped<ICustomerColumnPermissionService, CustomerColumnPermissionService>();
         services.AddScoped<ISupplierService, SupplierService>();
         services.AddScoped<ISupplierGroupService, SupplierGroupService>();
+        services.AddScoped<IGoodsReceiptService, GoodsReceiptService>();
+        services.AddScoped<IReturnReceiptService, ReturnReceiptService>();
+        services.AddScoped<IReceivingAccountService, ReceivingAccountService>();
         return services;
     }
 }
