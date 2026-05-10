@@ -60,6 +60,8 @@ public static class DependencyInjection
         services.AddScoped<IPurchaseOrderRepository, PurchaseOrderRepository>();
         services.AddScoped<ISalesInvoiceRepository, SalesInvoiceRepository>();
         services.AddScoped<ISalesReturnRepository, SalesReturnRepository>();
+        services.AddScoped<IPaymentCategoryRepository, PaymentCategoryRepository>();
+        services.AddScoped<ICashbookRepository, CashbookRepository>();
         services.AddScoped<IEndOfDayService, EndOfDayService>();
         services.AddOptions<R2StorageOptions>()
             .Bind(configuration.GetSection(R2StorageOptions.SectionName));

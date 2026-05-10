@@ -3,6 +3,7 @@ using FluentValidation.Results;
 using Quay27.Application.Abstractions;
 using Quay27.Application.Common;
 using Quay27.Application.Common.Exceptions;
+using Quay27.Application.Cashbook;
 using Quay27.Application.Orders;
 using Quay27.Application.Repositories;
 using Quay27.Domain.Entities;
@@ -19,6 +20,7 @@ public sealed class SalesReturnService : ISalesReturnService
     private readonly ICurrentUser _currentUser;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IValidator<CreateSalesReturnRequest> _createValidator;
+    private readonly ICashbookSyncService _cashbookSync;
 
     public SalesReturnService(
         ISalesReturnRepository returns,
@@ -28,7 +30,8 @@ public sealed class SalesReturnService : ISalesReturnService
         ISaleChannelRepository channels,
         ICurrentUser currentUser,
         IUnitOfWork unitOfWork,
-        IValidator<CreateSalesReturnRequest> createValidator)
+        IValidator<CreateSalesReturnRequest> createValidator,
+        ICashbookSyncService cashbookSync)
     {
         _returns = returns;
         _products = products;
@@ -38,6 +41,7 @@ public sealed class SalesReturnService : ISalesReturnService
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
         _createValidator = createValidator;
+        _cashbookSync = cashbookSync;
     }
 
     public Task<IReadOnlyList<SalesReturnListItemDto>> ListAsync(SalesReturnListQuery query,
@@ -229,7 +233,41 @@ public sealed class SalesReturnService : ISalesReturnService
         {
             await _returns.AddAsync(entity, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _cashbookSync.SyncAfterSalesReturnStatusAsync(entity, null, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
             return new OrderCreatedDto { Id = id, Code = code };
+        }, cancellationToken);
+    }
+
+    public async Task PatchStatusAsync(Guid id, PatchOrderStatusRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        if (string.IsNullOrWhiteSpace(request.Status))
+        {
+            throw new ValidationException(new[]
+                { new ValidationFailure(nameof(request.Status), "Trạng thái không được để trống.") });
+        }
+
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "returned", "cancelled",
+        };
+        var next = request.Status.Trim();
+        if (!allowed.Contains(next))
+        {
+            throw new ValidationException(new[]
+                { new ValidationFailure(nameof(request.Status), "Trạng thái trả hàng không hợp lệ.") });
+        }
+
+        await _unitOfWork.ExecuteInTransactionAsync(async () =>
+        {
+            var entity = await _returns.GetTrackedByIdAsync(id, cancellationToken)
+                         ?? throw new NotFoundException("Không tìm thấy phiếu trả hàng.");
+            var prev = entity.Status;
+            entity.Status = next;
+            await _cashbookSync.SyncAfterSalesReturnStatusAsync(entity, prev, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
         }, cancellationToken);
     }
 

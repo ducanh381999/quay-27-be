@@ -11,4 +11,6 @@ public interface ISalesInvoiceRepository
     Task<string> GenerateNextCodeAsync(CancellationToken cancellationToken = default);
 
     Task AddAsync(SalesInvoice entity, CancellationToken cancellationToken = default);
+
+    Task<SalesInvoice?> GetTrackedByIdAsync(Guid id, CancellationToken cancellationToken = default);
 }

@@ -15,6 +15,12 @@ public interface ICustomerRepository
         string? searchTerm = null, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Guid>> GetActiveCustomerIdsWithSameNameAddressAsync(string nameAddress, CancellationToken cancellationToken = default);
     Task AddAsync(Customer customer, CancellationToken cancellationToken = default);
+
+    /// <summary>Next <see cref="Customer.SortOrder"/> for new rows on the given sheet date (1-based).</summary>
+    Task<int> GetNextSortOrderForSheetDateAsync(DateOnly sheetDate, CancellationToken cancellationToken = default);
+
+    Task<Guid?> FindCustomerIdBySalesInvoiceIdAsync(Guid salesInvoiceId, CancellationToken cancellationToken = default);
+
     Task<bool> SoftDeleteAsync(Guid id, string updatedBy, CancellationToken cancellationToken = default);
     Task UpdateDuplicateStateAsync(IReadOnlyList<Guid> customerIds, bool isDuplicate, CancellationToken cancellationToken = default);
     Task<int> AdvanceSheetDateForUnqueuedActiveCustomersAsync(CancellationToken cancellationToken = default);

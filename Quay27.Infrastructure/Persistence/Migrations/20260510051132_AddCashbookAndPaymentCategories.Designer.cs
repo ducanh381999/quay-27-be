@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Quay27.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using Quay27.Infrastructure.Persistence;
 namespace Quay27.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260510051132_AddCashbookAndPaymentCategories")]
+    partial class AddCashbookAndPaymentCategories
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -325,9 +328,6 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<Guid?>("SalesInvoiceId")
-                        .HasColumnType("char(36)");
-
                     b.Property<DateOnly>("SheetDate")
                         .HasColumnType("date");
 
@@ -355,9 +355,6 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("InvoiceCode");
-
-                    b.HasIndex("SalesInvoiceId")
-                        .IsUnique();
 
                     b.HasIndex("SheetDate");
 

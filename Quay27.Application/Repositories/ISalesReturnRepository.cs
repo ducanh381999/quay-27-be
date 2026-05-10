@@ -11,4 +11,6 @@ public interface ISalesReturnRepository
     Task<string> GenerateNextCodeAsync(CancellationToken cancellationToken = default);
 
     Task AddAsync(SalesReturn entity, CancellationToken cancellationToken = default);
+
+    Task<SalesReturn?> GetTrackedByIdAsync(Guid id, CancellationToken cancellationToken = default);
 }

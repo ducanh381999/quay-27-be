@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Quay27.Application.Abstractions;
+using Quay27.Application.Cashbook;
 using Quay27.Application.Orders;
 
 namespace Quay27_Be.Controllers;
@@ -50,5 +51,14 @@ public sealed class ReturnsController : ControllerBase
     {
         var created = await _service.CreateAsync(request, cancellationToken);
         return StatusCode(StatusCodes.Status201Created, created);
+    }
+
+    [HttpPatch("{id:guid}/status")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> PatchStatus(Guid id, [FromBody] PatchOrderStatusRequest request,
+        CancellationToken cancellationToken)
+    {
+        await _service.PatchStatusAsync(id, request, cancellationToken);
+        return NoContent();
     }
 }

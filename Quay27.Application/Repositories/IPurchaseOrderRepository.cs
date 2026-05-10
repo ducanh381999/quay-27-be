@@ -11,4 +11,6 @@ public interface IPurchaseOrderRepository
     Task<string> GenerateNextCodeAsync(CancellationToken cancellationToken = default);
 
     Task AddAsync(PurchaseOrder entity, CancellationToken cancellationToken = default);
+
+    Task<PurchaseOrder?> GetTrackedByIdAsync(Guid id, CancellationToken cancellationToken = default);
 }

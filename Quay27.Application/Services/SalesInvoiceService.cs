@@ -1,8 +1,10 @@
+using System.Globalization;
 using FluentValidation;
 using FluentValidation.Results;
 using Quay27.Application.Abstractions;
 using Quay27.Application.Common;
 using Quay27.Application.Common.Exceptions;
+using Quay27.Application.Cashbook;
 using Quay27.Application.Orders;
 using Quay27.Application.Repositories;
 using Quay27.Domain.Entities;
@@ -19,6 +21,8 @@ public sealed class SalesInvoiceService : ISalesInvoiceService
     private readonly ICurrentUser _currentUser;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IValidator<CreateSalesInvoiceRequest> _createValidator;
+    private readonly ICashbookSyncService _cashbookSync;
+    private readonly ICustomerService _customerSheet;
 
     public SalesInvoiceService(
         ISalesInvoiceRepository invoices,
@@ -28,7 +32,9 @@ public sealed class SalesInvoiceService : ISalesInvoiceService
         ISaleChannelRepository channels,
         ICurrentUser currentUser,
         IUnitOfWork unitOfWork,
-        IValidator<CreateSalesInvoiceRequest> createValidator)
+        IValidator<CreateSalesInvoiceRequest> createValidator,
+        ICashbookSyncService cashbookSync,
+        ICustomerService customerSheet)
     {
         _invoices = invoices;
         _products = products;
@@ -38,6 +44,8 @@ public sealed class SalesInvoiceService : ISalesInvoiceService
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
         _createValidator = createValidator;
+        _cashbookSync = cashbookSync;
+        _customerSheet = customerSheet;
     }
 
     public Task<IReadOnlyList<SalesInvoiceListItemDto>> ListAsync(SalesInvoiceListQuery query,
@@ -124,11 +132,60 @@ public sealed class SalesInvoiceService : ISalesInvoiceService
             });
         }
 
+        string? sellerStaffLabel = null;
+        if (request.SellerUserId is { } sellerId &&
+            await _users.GetByIdAsync(sellerId, cancellationToken) is { } sellerUser)
+        {
+            sellerStaffLabel = string.IsNullOrWhiteSpace(sellerUser.FullName)
+                ? sellerUser.Username
+                : sellerUser.FullName.Trim();
+        }
+
         return await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
             await _invoices.AddAsync(entity, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            return new OrderCreatedDto { Id = id, Code = code };
+            await _customerSheet.CreateFullSheetRowFromSalesInvoiceAsync(entity, customer, sellerStaffLabel,
+                cancellationToken);
+            var sheetDateIso = VietnamDate.TodayInVietnam().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            return new OrderCreatedDto
+            {
+                Id = id,
+                Code = code,
+                CustomerSheetDateIso = sheetDateIso,
+            };
+        }, cancellationToken);
+    }
+
+    public async Task PatchStatusAsync(Guid id, PatchOrderStatusRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        if (string.IsNullOrWhiteSpace(request.Status))
+        {
+            throw new ValidationException(new[]
+                { new ValidationFailure(nameof(request.Status), "Trạng thái không được để trống.") });
+        }
+
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "processing", "completed", "undeliverable", "cancelled",
+        };
+        var next = request.Status.Trim();
+        if (!allowed.Contains(next))
+        {
+            throw new ValidationException(new[]
+                { new ValidationFailure(nameof(request.Status), "Trạng thái hóa đơn không hợp lệ.") });
+        }
+
+        await _unitOfWork.ExecuteInTransactionAsync(async () =>
+        {
+            var entity = await _invoices.GetTrackedByIdAsync(id, cancellationToken)
+                         ?? throw new NotFoundException("Không tìm thấy hóa đơn.");
+            var prev = entity.Status;
+            entity.Status = next;
+            await _cashbookSync.SyncAfterSalesInvoiceStatusAsync(entity, prev, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
         }, cancellationToken);
     }
 

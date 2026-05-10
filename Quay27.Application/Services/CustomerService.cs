@@ -339,6 +339,67 @@ public class CustomerService : ICustomerService
         return dto;
     }
 
+    public async Task CreateFullSheetRowFromSalesInvoiceAsync(
+        SalesInvoice invoice,
+        CustomerProfile? profile,
+        string? sellerStaffLabel,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        var username = _currentUser.Username;
+        if (await _customers.FindCustomerIdBySalesInvoiceIdAsync(invoice.Id, cancellationToken) is not null)
+        {
+            _logger.LogInformation("Full sheet row already exists for sales invoice {InvoiceId}", invoice.Id);
+            return;
+        }
+
+        var sheetDate = VietnamDate.TodayInVietnam();
+        var sortOrder = await _customers.GetNextSortOrderForSheetDateAsync(sheetDate, cancellationToken);
+        var rowId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        var entity = InvoiceToCustomerSheetMapper.BuildCustomerRow(
+            rowId,
+            invoice,
+            profile,
+            sortOrder,
+            sheetDate,
+            sellerStaffLabel,
+            username,
+            now,
+            username);
+
+        await _customers.AddAsync(entity, cancellationToken);
+
+        var audits = new List<AuditLog>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                TableName = SchemaConstants.CustomersTable,
+                RecordId = rowId,
+                ColumnName = "Import",
+                OldValue = null,
+                NewValue = "SalesInvoice",
+                ActionType = "Import",
+                ChangedBy = username,
+                ChangedDate = now,
+            },
+        };
+        audits.AddRange(BuildInsertAudits(rowId, entity, username, now));
+        await _auditLogs.AddRangeAsync(audits, cancellationToken);
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await RecomputeDuplicatesForNameAddressAsync(entity.NameAddress, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var dto = (await _customers.GetProjectedByIdAsync(rowId, cancellationToken))!;
+        await _realtime.NotifyAsync(
+            new CustomerSheetChangeNotification(dto.SheetDate, dto.Id, "created"), cancellationToken);
+
+        _logger.LogInformation("Full sheet row {CustomerId} created from sales invoice {InvoiceId}", rowId, invoice.Id);
+    }
+
     public async Task<CustomerDto> UpdateAsync(Guid id, UpdateCustomerRequest request, CancellationToken cancellationToken = default)
     {
         EnsureAuthenticated();

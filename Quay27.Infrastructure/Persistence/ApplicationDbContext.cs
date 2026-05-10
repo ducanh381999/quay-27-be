@@ -43,6 +43,9 @@ public class ApplicationDbContext : DbContext
     public DbSet<SalesReturn> SalesReturns => Set<SalesReturn>();
     public DbSet<SalesReturnItem> SalesReturnItems => Set<SalesReturnItem>();
     public DbSet<SalesReturnExchangeItem> SalesReturnExchangeItems => Set<SalesReturnExchangeItem>();
+    public DbSet<PaymentCategory> PaymentCategories => Set<PaymentCategory>();
+    public DbSet<CashbookParty> CashbookParties => Set<CashbookParty>();
+    public DbSet<CashbookEntry> CashbookEntries => Set<CashbookEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -95,6 +98,8 @@ public class ApplicationDbContext : DbContext
             e.Property(x => x.UpdatedBy).HasMaxLength(256);
             e.HasIndex(x => x.SheetDate);
             e.HasIndex(x => x.InvoiceCode);
+            e.Property(x => x.SalesInvoiceId);
+            e.HasIndex(x => x.SalesInvoiceId).IsUnique();
         });
 
         modelBuilder.Entity<Queue>(e =>
@@ -580,6 +585,60 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PaymentCategory>(e =>
+        {
+            e.ToTable("PaymentCategories");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(64).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(512).IsRequired();
+            e.Property(x => x.Kind).HasMaxLength(16).IsRequired();
+            e.HasIndex(x => x.Code).IsUnique();
+        });
+
+        modelBuilder.Entity<CashbookParty>(e =>
+        {
+            e.ToTable("CashbookParties");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(256).IsRequired();
+            e.Property(x => x.Phone).HasMaxLength(32);
+            e.Property(x => x.Address).HasMaxLength(512);
+            e.Property(x => x.Province).HasMaxLength(128);
+            e.Property(x => x.Ward).HasMaxLength(128);
+            e.Property(x => x.Note).HasColumnType("longtext");
+            e.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<CashbookEntry>(e =>
+        {
+            e.ToTable("CashbookEntries");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(64).IsRequired();
+            e.Property(x => x.EntryType).HasMaxLength(16).IsRequired();
+            e.Property(x => x.FundType).HasMaxLength(16).IsRequired();
+            e.Property(x => x.Amount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Note).HasColumnType("longtext");
+            e.Property(x => x.Status).HasMaxLength(16).IsRequired();
+            e.Property(x => x.CounterpartyScope).HasMaxLength(32).IsRequired();
+            e.Property(x => x.CounterpartyDisplayName).HasMaxLength(256);
+            e.Property(x => x.PartnerDebtMode).HasMaxLength(32).IsRequired();
+            e.Property(x => x.SourceKind).HasMaxLength(32).IsRequired();
+            e.HasIndex(x => x.Code).IsUnique();
+            e.HasIndex(x => x.OccurredAtUtc);
+            e.HasIndex(x => new { x.SourceKind, x.SourceId }).IsUnique()
+                .HasFilter("`SourceId` IS NOT NULL");
+            e.HasOne(x => x.PaymentCategory).WithMany().HasForeignKey(x => x.PaymentCategoryId)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.CashbookParty).WithMany().HasForeignKey(x => x.CashbookPartyId)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.CollectorUser).WithMany().HasForeignKey(x => x.CollectorUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.StaffUser).WithMany().HasForeignKey(x => x.StaffUserId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }
