@@ -1,0 +1,178 @@
+using FluentValidation;
+using FluentValidation.Results;
+using Quay27.Application.Abstractions;
+using Quay27.Application.Common;
+using Quay27.Application.Common.Exceptions;
+using Quay27.Application.Orders;
+using Quay27.Application.Repositories;
+using Quay27.Domain.Entities;
+
+namespace Quay27.Application.Services;
+
+public sealed class SalesInvoiceService : ISalesInvoiceService
+{
+    private readonly ISalesInvoiceRepository _invoices;
+    private readonly IProductRepository _products;
+    private readonly ICustomerProfileRepository _customers;
+    private readonly IUserRepository _users;
+    private readonly ISaleChannelRepository _channels;
+    private readonly ICurrentUser _currentUser;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IValidator<CreateSalesInvoiceRequest> _createValidator;
+
+    public SalesInvoiceService(
+        ISalesInvoiceRepository invoices,
+        IProductRepository products,
+        ICustomerProfileRepository customers,
+        IUserRepository users,
+        ISaleChannelRepository channels,
+        ICurrentUser currentUser,
+        IUnitOfWork unitOfWork,
+        IValidator<CreateSalesInvoiceRequest> createValidator)
+    {
+        _invoices = invoices;
+        _products = products;
+        _customers = customers;
+        _users = users;
+        _channels = channels;
+        _currentUser = currentUser;
+        _unitOfWork = unitOfWork;
+        _createValidator = createValidator;
+    }
+
+    public Task<IReadOnlyList<SalesInvoiceListItemDto>> ListAsync(SalesInvoiceListQuery query,
+        CancellationToken cancellationToken = default) =>
+        _invoices.ListAsync(query, cancellationToken);
+
+    public async Task<OrderCreatedDto> CreateAsync(CreateSalesInvoiceRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        var vr = await _createValidator.ValidateAsync(request, cancellationToken);
+        if (!vr.IsValid)
+            throw new ValidationException(vr.Errors);
+
+        if (request.SellerUserId.HasValue &&
+            await _users.GetByIdAsync(request.SellerUserId.Value, cancellationToken) is null)
+        {
+            throw new ValidationException(new[]
+                { new ValidationFailure(nameof(request.SellerUserId), "Người bán không tồn tại.") });
+        }
+
+        if (request.SaleChannelId.HasValue &&
+            !await _channels.ExistsByIdAsync(request.SaleChannelId.Value, cancellationToken))
+        {
+            throw new ValidationException(new[]
+                { new ValidationFailure(nameof(request.SaleChannelId), "Kênh bán không tồn tại.") });
+        }
+
+        CustomerProfile? customer = null;
+        if (request.CustomerProfileId.HasValue)
+        {
+            customer = await _customers.GetByIdAsync(request.CustomerProfileId.Value, cancellationToken);
+            if (customer is null || customer.IsDeleted)
+            {
+                throw new ValidationException(new[]
+                    { new ValidationFailure(nameof(request.CustomerProfileId), "Khách hàng không tồn tại.") });
+            }
+        }
+
+        var (serverSubtotal, productLookup) = await ValidateLinesAndAggregateAsync(request.Items, cancellationToken);
+        OrderTotalsValidation.ValidateSubtotalDiscountTotal(
+            serverSubtotal,
+            request.ClientSubtotal,
+            request.ClientDiscountAmount,
+            request.ClientTotal);
+
+        var id = Guid.NewGuid();
+        var code = await _invoices.GenerateNextCodeAsync(cancellationToken);
+        var discount = MoneyMath.Round(request.ClientDiscountAmount);
+        var entity = new SalesInvoice
+        {
+            Id = id,
+            Code = code,
+            CreatedAtUtc = DateTime.UtcNow,
+            InvoiceDeliveryType = "no_delivery",
+            Status = "processing",
+            SubtotalAmount = serverSubtotal,
+            DiscountAmount = discount,
+            PaidAmount = MoneyMath.Round(request.PaidAmount),
+            PaymentMethod = "cash",
+            SellerUserId = request.SellerUserId,
+            CreatedByUserId = _currentUser.UserId,
+            SaleChannelId = request.SaleChannelId,
+            CustomerProfileId = customer?.Id,
+            CustomerCode = customer?.CustomerCode,
+            CustomerName = customer?.CustomerName,
+            Note = request.Note,
+        };
+
+        foreach (var line in request.Items)
+        {
+            var p = productLookup[line.ProductId];
+            var lineTotal = MoneyMath.Round(line.Quantity * line.UnitPrice);
+            entity.Items.Add(new SalesInvoiceItem
+            {
+                Id = Guid.NewGuid(),
+                SalesInvoiceId = id,
+                ProductId = p.Id,
+                ProductCode = line.ProductCode.Trim(),
+                ProductName = line.ProductName.Trim(),
+                Quantity = line.Quantity,
+                UnitPrice = MoneyMath.Round(line.UnitPrice),
+                LineTotal = lineTotal,
+            });
+        }
+
+        return await _unitOfWork.ExecuteInTransactionAsync(async () =>
+        {
+            await _invoices.AddAsync(entity, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            return new OrderCreatedDto { Id = id, Code = code };
+        }, cancellationToken);
+    }
+
+    private async Task<(decimal subtotal, Dictionary<Guid, Product> products)> ValidateLinesAndAggregateAsync(
+        IList<CreateOrderItemRequest> lines,
+        CancellationToken cancellationToken)
+    {
+        var productLookup = new Dictionary<Guid, Product>();
+        var serverSubtotal = 0m;
+        foreach (var line in lines)
+        {
+            var product =
+                productLookup.GetValueOrDefault(line.ProductId)
+                ?? await _products.GetByIdAsync(line.ProductId, cancellationToken);
+            if (product is null)
+            {
+                throw new ValidationException(new[]
+                    { new ValidationFailure(nameof(line.ProductId), "Không tìm thấy hàng hóa.") });
+            }
+
+            productLookup[line.ProductId] = product;
+
+            if (!string.Equals(product.RowStatus, "active", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ValidationException(new[]
+                    { new ValidationFailure(nameof(line.ProductId), "Hàng hóa đã ngừng kinh doanh.") });
+            }
+
+            if (!string.Equals(line.ProductCode.Trim(), product.Code.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ValidationException(new[]
+                    { new ValidationFailure(nameof(line.ProductCode), "Mã hàng không khớp với hệ thống.") });
+            }
+
+            var lineSum = MoneyMath.Round(line.Quantity * line.UnitPrice);
+            serverSubtotal = MoneyMath.Round(serverSubtotal + lineSum);
+        }
+
+        return (serverSubtotal, productLookup);
+    }
+
+    private void EnsureAuthenticated()
+    {
+        if (!_currentUser.IsAuthenticated || _currentUser.UserId is null)
+            throw new ForbiddenException("Authentication required.");
+    }
+}

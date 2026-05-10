@@ -35,6 +35,14 @@ public class ApplicationDbContext : DbContext
     public DbSet<ReturnReceiptLine> ReturnReceiptLines => Set<ReturnReceiptLine>();
     public DbSet<SupplierPaymentAllocation> SupplierPaymentAllocations => Set<SupplierPaymentAllocation>();
     public DbSet<ReceivingAccount> ReceivingAccounts => Set<ReceivingAccount>();
+    public DbSet<SaleChannel> SaleChannels => Set<SaleChannel>();
+    public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
+    public DbSet<PurchaseOrderItem> PurchaseOrderItems => Set<PurchaseOrderItem>();
+    public DbSet<SalesInvoice> SalesInvoices => Set<SalesInvoice>();
+    public DbSet<SalesInvoiceItem> SalesInvoiceItems => Set<SalesInvoiceItem>();
+    public DbSet<SalesReturn> SalesReturns => Set<SalesReturn>();
+    public DbSet<SalesReturnItem> SalesReturnItems => Set<SalesReturnItem>();
+    public DbSet<SalesReturnExchangeItem> SalesReturnExchangeItems => Set<SalesReturnExchangeItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -416,6 +424,161 @@ public class ApplicationDbContext : DbContext
             e.HasOne(x => x.ReceivingAccount)
                 .WithMany()
                 .HasForeignKey(x => x.ReceivingAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SaleChannel>(e =>
+        {
+            e.ToTable("SaleChannels");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(256).IsRequired();
+            e.Property(x => x.Description).HasColumnType("longtext");
+            e.HasIndex(x => x.Name);
+        });
+
+        modelBuilder.Entity<PurchaseOrder>(e =>
+        {
+            e.ToTable("PurchaseOrders");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(64).IsRequired();
+            e.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            e.Property(x => x.CustomerCode).HasMaxLength(64);
+            e.Property(x => x.CustomerName).HasMaxLength(256);
+            e.Property(x => x.Note).HasColumnType("longtext");
+            e.Property(x => x.DeliveryPartner).HasMaxLength(256);
+            e.Property(x => x.ProvinceKey).HasMaxLength(64);
+            e.Property(x => x.DistrictKey).HasMaxLength(64);
+            e.Property(x => x.PaymentMethod).HasMaxLength(32).IsRequired();
+            e.Property(x => x.SubtotalAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.DiscountAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.AmountDue).HasColumnType("decimal(18,2)");
+            e.Property(x => x.AmountPaid).HasColumnType("decimal(18,2)");
+            e.HasIndex(x => x.Code).IsUnique();
+            e.HasIndex(x => x.CreatedAtUtc);
+            e.HasOne(x => x.CustomerProfile).WithMany().HasForeignKey(x => x.CustomerProfileId)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.ReceivedByUser).WithMany().HasForeignKey(x => x.ReceivedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.SellerUser).WithMany().HasForeignKey(x => x.SellerUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.SaleChannel).WithMany().HasForeignKey(x => x.SaleChannelId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<PurchaseOrderItem>(e =>
+        {
+            e.ToTable("PurchaseOrderItems");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.ProductCode).HasMaxLength(64).IsRequired();
+            e.Property(x => x.ProductName).HasMaxLength(512).IsRequired();
+            e.Property(x => x.UnitPrice).HasColumnType("decimal(18,2)");
+            e.Property(x => x.LineTotal).HasColumnType("decimal(18,2)");
+            e.HasOne(x => x.PurchaseOrder).WithMany(x => x.Items).HasForeignKey(x => x.PurchaseOrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SalesInvoice>(e =>
+        {
+            e.ToTable("SalesInvoices");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(64).IsRequired();
+            e.Property(x => x.ReturnReferenceCode).HasMaxLength(64);
+            e.Property(x => x.CustomerCode).HasMaxLength(64);
+            e.Property(x => x.CustomerName).HasMaxLength(256);
+            e.Property(x => x.Note).HasColumnType("longtext");
+            e.Property(x => x.InvoiceDeliveryType).HasMaxLength(32).IsRequired();
+            e.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            e.Property(x => x.DeliveryStatus).HasMaxLength(64);
+            e.Property(x => x.DeliveryPartner).HasMaxLength(256);
+            e.Property(x => x.ProvinceKey).HasMaxLength(64);
+            e.Property(x => x.DistrictKey).HasMaxLength(64);
+            e.Property(x => x.PaymentMethod).HasMaxLength(32).IsRequired();
+            e.Property(x => x.SubtotalAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.DiscountAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.PaidAmount).HasColumnType("decimal(18,2)");
+            e.HasIndex(x => x.Code).IsUnique();
+            e.HasIndex(x => x.CreatedAtUtc);
+            e.HasOne(x => x.CustomerProfile).WithMany().HasForeignKey(x => x.CustomerProfileId)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.SellerUser).WithMany().HasForeignKey(x => x.SellerUserId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.PriceList).WithMany().HasForeignKey(x => x.PriceListId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.SaleChannel).WithMany().HasForeignKey(x => x.SaleChannelId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<SalesInvoiceItem>(e =>
+        {
+            e.ToTable("SalesInvoiceItems");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.ProductCode).HasMaxLength(64).IsRequired();
+            e.Property(x => x.ProductName).HasMaxLength(512).IsRequired();
+            e.Property(x => x.UnitPrice).HasColumnType("decimal(18,2)");
+            e.Property(x => x.LineTotal).HasColumnType("decimal(18,2)");
+            e.HasOne(x => x.SalesInvoice).WithMany(x => x.Items).HasForeignKey(x => x.SalesInvoiceId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SalesReturn>(e =>
+        {
+            e.ToTable("SalesReturns");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(64).IsRequired();
+            e.Property(x => x.CustomerCode).HasMaxLength(64);
+            e.Property(x => x.CustomerName).HasMaxLength(256);
+            e.Property(x => x.Note).HasColumnType("longtext");
+            e.Property(x => x.ReturnType).HasMaxLength(32).IsRequired();
+            e.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            e.Property(x => x.OtherCollectionType).HasMaxLength(128);
+            e.Property(x => x.ReturnSubtotalAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.ReturnDiscountAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.ReturnFeeAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.RefundDueAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.ExchangeSubtotalAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.ExchangeDiscountAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.PurchaseDueAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.NetAmountDueFromCustomer).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Amount).HasColumnType("decimal(18,2)");
+            e.HasIndex(x => x.Code).IsUnique();
+            e.HasIndex(x => x.CreatedAtUtc);
+            e.HasOne(x => x.CustomerProfile).WithMany().HasForeignKey(x => x.CustomerProfileId)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.ReceivedByUser).WithMany().HasForeignKey(x => x.ReceivedByUserId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.SellerUser).WithMany().HasForeignKey(x => x.SellerUserId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.SaleChannel).WithMany().HasForeignKey(x => x.SaleChannelId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<SalesReturnItem>(e =>
+        {
+            e.ToTable("SalesReturnItems");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.ProductCode).HasMaxLength(64).IsRequired();
+            e.Property(x => x.ProductName).HasMaxLength(512).IsRequired();
+            e.Property(x => x.UnitPrice).HasColumnType("decimal(18,2)");
+            e.Property(x => x.LineTotal).HasColumnType("decimal(18,2)");
+            e.HasOne(x => x.SalesReturn).WithMany(x => x.ReturnItems).HasForeignKey(x => x.SalesReturnId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SalesReturnExchangeItem>(e =>
+        {
+            e.ToTable("SalesReturnExchangeItems");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.ProductCode).HasMaxLength(64).IsRequired();
+            e.Property(x => x.ProductName).HasMaxLength(512).IsRequired();
+            e.Property(x => x.UnitPrice).HasColumnType("decimal(18,2)");
+            e.Property(x => x.LineTotal).HasColumnType("decimal(18,2)");
+            e.HasOne(x => x.SalesReturn).WithMany(x => x.ExchangeItems).HasForeignKey(x => x.SalesReturnId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }

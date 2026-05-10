@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Quay27.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using Quay27.Infrastructure.Persistence;
 namespace Quay27.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260509104843_AddOrdersModule")]
+    partial class AddOrdersModule
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -910,9 +913,6 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
 
-                    b.Property<Guid?>("CustomerProfileId")
-                        .HasColumnType("char(36)");
-
                     b.Property<DateTime?>("DeliveryFromUtc")
                         .HasColumnType("datetime(6)");
 
@@ -923,15 +923,9 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("DeliveryToUtc")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<decimal>("DiscountAmount")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<string>("DistrictKey")
                         .HasMaxLength(64)
                         .HasColumnType("varchar(64)");
-
-                    b.Property<string>("Note")
-                        .HasColumnType("longtext");
 
                     b.Property<string>("PaymentMethod")
                         .IsRequired()
@@ -948,16 +942,10 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("SaleChannelId")
                         .HasColumnType("char(36)");
 
-                    b.Property<Guid?>("SellerUserId")
-                        .HasColumnType("char(36)");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("varchar(32)");
-
-                    b.Property<decimal>("SubtotalAmount")
-                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 
@@ -968,55 +956,11 @@ namespace Quay27.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CreatedByUserId");
 
-                    b.HasIndex("CustomerProfileId");
-
                     b.HasIndex("ReceivedByUserId");
 
                     b.HasIndex("SaleChannelId");
 
-                    b.HasIndex("SellerUserId");
-
                     b.ToTable("PurchaseOrders", (string)null);
-                });
-
-            modelBuilder.Entity("Quay27.Domain.Entities.PurchaseOrderItem", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<decimal>("LineTotal")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("ProductCode")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("varchar(64)");
-
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("ProductName")
-                        .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("varchar(512)");
-
-                    b.Property<Guid>("PurchaseOrderId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("UnitPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProductId");
-
-                    b.HasIndex("PurchaseOrderId");
-
-                    b.ToTable("PurchaseOrderItems", (string)null);
                 });
 
             modelBuilder.Entity("Quay27.Domain.Entities.Queue", b =>
@@ -1283,9 +1227,6 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
 
-                    b.Property<Guid?>("CustomerProfileId")
-                        .HasColumnType("char(36)");
-
                     b.Property<DateTime?>("DeliveryFromUtc")
                         .HasColumnType("datetime(6)");
 
@@ -1311,9 +1252,6 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("varchar(32)");
-
-                    b.Property<string>("Note")
-                        .HasColumnType("longtext");
 
                     b.Property<decimal>("PaidAmount")
                         .HasColumnType("decimal(18,2)");
@@ -1357,8 +1295,6 @@ namespace Quay27.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CreatedByUserId");
 
-                    b.HasIndex("CustomerProfileId");
-
                     b.HasIndex("PriceListId");
 
                     b.HasIndex("SaleChannelId");
@@ -1366,46 +1302,6 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.HasIndex("SellerUserId");
 
                     b.ToTable("SalesInvoices", (string)null);
-                });
-
-            modelBuilder.Entity("Quay27.Domain.Entities.SalesInvoiceItem", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<decimal>("LineTotal")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("ProductCode")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("varchar(64)");
-
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("ProductName")
-                        .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("varchar(512)");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("SalesInvoiceId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<decimal>("UnitPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProductId");
-
-                    b.HasIndex("SalesInvoiceId");
-
-                    b.ToTable("SalesInvoiceItems", (string)null);
                 });
 
             modelBuilder.Entity("Quay27.Domain.Entities.SalesReturn", b =>
@@ -1436,48 +1332,12 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
 
-                    b.Property<Guid?>("CustomerProfileId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<bool>("ExchangeDelivery")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<decimal>("ExchangeDiscountAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("ExchangeSubtotalAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<bool>("HasExchangeItems")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<decimal>("NetAmountDueFromCustomer")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Note")
-                        .HasColumnType("longtext");
-
                     b.Property<string>("OtherCollectionType")
                         .HasMaxLength(128)
                         .HasColumnType("varchar(128)");
 
-                    b.Property<decimal>("PurchaseDueAmount")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<Guid?>("ReceivedByUserId")
                         .HasColumnType("char(36)");
-
-                    b.Property<decimal>("RefundDueAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("ReturnDiscountAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("ReturnFeeAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("ReturnSubtotalAmount")
-                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("ReturnType")
                         .IsRequired()
@@ -1485,9 +1345,6 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                         .HasColumnType("varchar(32)");
 
                     b.Property<Guid?>("SaleChannelId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid?>("SellerUserId")
                         .HasColumnType("char(36)");
 
                     b.Property<string>("Status")
@@ -1504,95 +1361,11 @@ namespace Quay27.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CreatedByUserId");
 
-                    b.HasIndex("CustomerProfileId");
-
                     b.HasIndex("ReceivedByUserId");
 
                     b.HasIndex("SaleChannelId");
 
-                    b.HasIndex("SellerUserId");
-
                     b.ToTable("SalesReturns", (string)null);
-                });
-
-            modelBuilder.Entity("Quay27.Domain.Entities.SalesReturnExchangeItem", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<decimal>("LineTotal")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("ProductCode")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("varchar(64)");
-
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("ProductName")
-                        .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("varchar(512)");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("SalesReturnId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<decimal>("UnitPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProductId");
-
-                    b.HasIndex("SalesReturnId");
-
-                    b.ToTable("SalesReturnExchangeItems", (string)null);
-                });
-
-            modelBuilder.Entity("Quay27.Domain.Entities.SalesReturnItem", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<decimal>("LineTotal")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("ProductCode")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("varchar(64)");
-
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("ProductName")
-                        .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("varchar(512)");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("SalesReturnId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<decimal>("UnitPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProductId");
-
-                    b.HasIndex("SalesReturnId");
-
-                    b.ToTable("SalesReturnItems", (string)null);
                 });
 
             modelBuilder.Entity("Quay27.Domain.Entities.SheetPickerDraftStaffName", b =>
@@ -1973,11 +1746,6 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                         .HasForeignKey("CreatedByUserId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("Quay27.Domain.Entities.CustomerProfile", "CustomerProfile")
-                        .WithMany()
-                        .HasForeignKey("CustomerProfileId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("Quay27.Domain.Entities.User", "ReceivedByUser")
                         .WithMany()
                         .HasForeignKey("ReceivedByUserId")
@@ -1988,39 +1756,11 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                         .HasForeignKey("SaleChannelId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("Quay27.Domain.Entities.User", "SellerUser")
-                        .WithMany()
-                        .HasForeignKey("SellerUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.Navigation("CreatedByUser");
-
-                    b.Navigation("CustomerProfile");
 
                     b.Navigation("ReceivedByUser");
 
                     b.Navigation("SaleChannel");
-
-                    b.Navigation("SellerUser");
-                });
-
-            modelBuilder.Entity("Quay27.Domain.Entities.PurchaseOrderItem", b =>
-                {
-                    b.HasOne("Quay27.Domain.Entities.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Quay27.Domain.Entities.PurchaseOrder", "PurchaseOrder")
-                        .WithMany("Items")
-                        .HasForeignKey("PurchaseOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-
-                    b.Navigation("PurchaseOrder");
                 });
 
             modelBuilder.Entity("Quay27.Domain.Entities.ReturnReceipt", b =>
@@ -2059,11 +1799,6 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                         .HasForeignKey("CreatedByUserId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("Quay27.Domain.Entities.CustomerProfile", "CustomerProfile")
-                        .WithMany()
-                        .HasForeignKey("CustomerProfileId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("Quay27.Domain.Entities.PriceList", "PriceList")
                         .WithMany()
                         .HasForeignKey("PriceListId")
@@ -2081,8 +1816,6 @@ namespace Quay27.Infrastructure.Persistence.Migrations
 
                     b.Navigation("CreatedByUser");
 
-                    b.Navigation("CustomerProfile");
-
                     b.Navigation("PriceList");
 
                     b.Navigation("SaleChannel");
@@ -2090,35 +1823,11 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.Navigation("SellerUser");
                 });
 
-            modelBuilder.Entity("Quay27.Domain.Entities.SalesInvoiceItem", b =>
-                {
-                    b.HasOne("Quay27.Domain.Entities.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Quay27.Domain.Entities.SalesInvoice", "SalesInvoice")
-                        .WithMany("Items")
-                        .HasForeignKey("SalesInvoiceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-
-                    b.Navigation("SalesInvoice");
-                });
-
             modelBuilder.Entity("Quay27.Domain.Entities.SalesReturn", b =>
                 {
                     b.HasOne("Quay27.Domain.Entities.User", "CreatedByUser")
                         .WithMany()
                         .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("Quay27.Domain.Entities.CustomerProfile", "CustomerProfile")
-                        .WithMany()
-                        .HasForeignKey("CustomerProfileId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Quay27.Domain.Entities.User", "ReceivedByUser")
@@ -2131,58 +1840,11 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                         .HasForeignKey("SaleChannelId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("Quay27.Domain.Entities.User", "SellerUser")
-                        .WithMany()
-                        .HasForeignKey("SellerUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.Navigation("CreatedByUser");
-
-                    b.Navigation("CustomerProfile");
 
                     b.Navigation("ReceivedByUser");
 
                     b.Navigation("SaleChannel");
-
-                    b.Navigation("SellerUser");
-                });
-
-            modelBuilder.Entity("Quay27.Domain.Entities.SalesReturnExchangeItem", b =>
-                {
-                    b.HasOne("Quay27.Domain.Entities.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Quay27.Domain.Entities.SalesReturn", "SalesReturn")
-                        .WithMany("ExchangeItems")
-                        .HasForeignKey("SalesReturnId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-
-                    b.Navigation("SalesReturn");
-                });
-
-            modelBuilder.Entity("Quay27.Domain.Entities.SalesReturnItem", b =>
-                {
-                    b.HasOne("Quay27.Domain.Entities.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Quay27.Domain.Entities.SalesReturn", "SalesReturn")
-                        .WithMany("ReturnItems")
-                        .HasForeignKey("SalesReturnId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-
-                    b.Navigation("SalesReturn");
                 });
 
             modelBuilder.Entity("Quay27.Domain.Entities.Supplier", b =>
@@ -2266,11 +1928,6 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.Navigation("Products");
                 });
 
-            modelBuilder.Entity("Quay27.Domain.Entities.PurchaseOrder", b =>
-                {
-                    b.Navigation("Items");
-                });
-
             modelBuilder.Entity("Quay27.Domain.Entities.Queue", b =>
                 {
                     b.Navigation("CustomerQueues");
@@ -2286,18 +1943,6 @@ namespace Quay27.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Quay27.Domain.Entities.Role", b =>
                 {
                     b.Navigation("UserRoles");
-                });
-
-            modelBuilder.Entity("Quay27.Domain.Entities.SalesInvoice", b =>
-                {
-                    b.Navigation("Items");
-                });
-
-            modelBuilder.Entity("Quay27.Domain.Entities.SalesReturn", b =>
-                {
-                    b.Navigation("ExchangeItems");
-
-                    b.Navigation("ReturnItems");
                 });
 
             modelBuilder.Entity("Quay27.Domain.Entities.SupplierGroup", b =>
