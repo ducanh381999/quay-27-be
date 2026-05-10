@@ -124,7 +124,7 @@ public sealed class CashbookService : ICashbookService
 
         var (displayName, partyId) = await ResolveCounterpartyAsync(request, cancellationToken);
 
-        var code = await _cashbook.GenerateNextCodeAsync("Receipt", cancellationToken);
+        var code = await _cashbook.GenerateNextReceiptCodeAsync(category.Code, cancellationToken);
         var entry = new CashbookEntry
         {
             Id = Guid.NewGuid(),
@@ -184,7 +184,7 @@ public sealed class CashbookService : ICashbookService
 
         var (displayName, partyId) = await ResolveCounterpartyAsync(request, cancellationToken);
 
-        var code = await _cashbook.GenerateNextCodeAsync("Payment", cancellationToken);
+        var code = await _cashbook.GenerateNextPaymentCodeAsync(cancellationToken);
         var entry = new CashbookEntry
         {
             Id = Guid.NewGuid(),

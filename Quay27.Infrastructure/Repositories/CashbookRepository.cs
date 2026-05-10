@@ -167,9 +167,28 @@ public sealed class CashbookRepository : ICashbookRepository
         return q;
     }
 
-    public async Task<string> GenerateNextCodeAsync(string entryType, CancellationToken cancellationToken = default)
+    public async Task<string> GenerateNextReceiptCodeAsync(string eventSegment, CancellationToken cancellationToken = default)
     {
-        var prefix = string.Equals(entryType, "Payment", StringComparison.OrdinalIgnoreCase) ? "PC" : "PT";
+        var ev = CashbookCodeFormatting.NormalizeReceiptEventSegment(eventSegment);
+        var prefix = $"{CashbookCodeFormatting.ReceiptPrefix}-{ev}-";
+        var codes = await _db.CashbookEntries.AsNoTracking()
+            .Where(x => x.EntryType == "Receipt" && x.Code.StartsWith(prefix))
+            .Select(x => x.Code)
+            .ToListAsync(cancellationToken);
+
+        var max = 0;
+        foreach (var c in codes)
+        {
+            if (CashbookCodeFormatting.TryParseReceiptSequence(c, ev, out var n))
+                max = Math.Max(max, n);
+        }
+
+        return $"{prefix}{(max + 1).ToString().PadLeft(CashbookCodeFormatting.ReceiptSequenceDigits, '0')}";
+    }
+
+    public async Task<string> GenerateNextPaymentCodeAsync(CancellationToken cancellationToken = default)
+    {
+        const string prefix = "PC";
         var maxCode = await _db.CashbookEntries
             .AsNoTracking()
             .Where(x => x.Code.StartsWith(prefix))

@@ -24,7 +24,11 @@ public interface ICashbookRepository
         IReadOnlyList<string>? partnerDebtModes,
         CancellationToken cancellationToken = default);
 
-    Task<string> GenerateNextCodeAsync(string entryType, CancellationToken cancellationToken = default);
+    /// <summary>Next receipt code: <c>PT-{EVENT}-{NNNNNN}</c>; counter is per normalized <paramref name="eventSegment"/>.</summary>
+    Task<string> GenerateNextReceiptCodeAsync(string eventSegment, CancellationToken cancellationToken = default);
+
+    /// <summary>Next payment code: <c>PC</c> + 6 digits (global sequence for payments).</summary>
+    Task<string> GenerateNextPaymentCodeAsync(CancellationToken cancellationToken = default);
     Task AddEntryAsync(CashbookEntry entity, CancellationToken cancellationToken = default);
     Task AddPartyAsync(CashbookParty entity, CancellationToken cancellationToken = default);
     Task<CashbookParty?> GetPartyByIdAsync(Guid id, CancellationToken cancellationToken = default);

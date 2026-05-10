@@ -39,7 +39,7 @@ public sealed class CashbookSyncService : ICashbookSyncService
         var cat = await _categories.GetByCodeAsync("CustomerPayment", cancellationToken)
                   ?? throw new InvalidOperationException("Payment category CustomerPayment is missing.");
 
-        var code = await _cashbook.GenerateNextCodeAsync("Receipt", cancellationToken);
+        var code = await _cashbook.GenerateNextReceiptCodeAsync("SalesInvoice", cancellationToken);
         var fund = MapPaymentMethodToFundType(invoice.PaymentMethod);
         var display = string.IsNullOrWhiteSpace(invoice.CustomerName)
             ? invoice.CustomerCode
@@ -96,7 +96,7 @@ public sealed class CashbookSyncService : ICashbookSyncService
         var cat = await _categories.GetByCodeAsync("CustomerPayment", cancellationToken)
                   ?? throw new InvalidOperationException("Payment category CustomerPayment is missing.");
 
-        var code = await _cashbook.GenerateNextCodeAsync("Receipt", cancellationToken);
+        var code = await _cashbook.GenerateNextReceiptCodeAsync("PurchaseOrder", cancellationToken);
         var fund = MapPaymentMethodToFundType(order.PaymentMethod);
         var display = string.IsNullOrWhiteSpace(order.CustomerName)
             ? order.CustomerCode
@@ -161,7 +161,9 @@ public sealed class CashbookSyncService : ICashbookSyncService
         var expenseCat = await _categories.GetByCodeAsync("OtherExpense", cancellationToken)
                          ?? throw new InvalidOperationException("Payment category OtherExpense is missing.");
 
-        var code = await _cashbook.GenerateNextCodeAsync(isReceipt ? "Receipt" : "Payment", cancellationToken);
+        var code = isReceipt
+            ? await _cashbook.GenerateNextReceiptCodeAsync("SalesReturn", cancellationToken)
+            : await _cashbook.GenerateNextPaymentCodeAsync(cancellationToken);
         var display = string.IsNullOrWhiteSpace(salesReturn.CustomerName)
             ? salesReturn.CustomerCode
             : salesReturn.CustomerName?.Trim();
