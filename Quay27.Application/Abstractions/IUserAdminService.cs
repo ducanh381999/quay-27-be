@@ -7,6 +7,9 @@ public interface IUserAdminService
     /// <summary>Active users for customer sheet staff pickers (any authenticated caller).</summary>
     Task<IReadOnlyList<UserPickerDto>> ListForSheetPickersAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>Active users with Id — for order / invoice filters (any authenticated caller).</summary>
+    Task<IReadOnlyList<UserOrderFilterOptionDto>> ListForOrderFiltersAsync(CancellationToken cancellationToken = default);
+
     /// <summary>Configured NV soạn names (admin screen), ordered.</summary>
     Task<IReadOnlyList<string>> ListSheetPickerDraftNamesAsync(CancellationToken cancellationToken = default);
 

@@ -68,6 +68,17 @@ public class UserAdminService : IUserAdminService
             .ToList();
     }
 
+    public async Task<IReadOnlyList<UserOrderFilterOptionDto>> ListForOrderFiltersAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var list = await _users.ListWithRolesAsync(cancellationToken);
+        return list
+            .Where(u => u.IsActive && (UserHasAdminRole(u) || UserHasStaffRole(u)))
+            .OrderBy(u => u.FullName, StringComparer.OrdinalIgnoreCase)
+            .Select(u => new UserOrderFilterOptionDto { Id = u.Id, FullName = u.FullName })
+            .ToList();
+    }
+
     public Task<IReadOnlyList<string>> ListSheetPickerDraftNamesAsync(CancellationToken cancellationToken = default) =>
         _draftStaffNames.ListOrderedAsync(cancellationToken);
 

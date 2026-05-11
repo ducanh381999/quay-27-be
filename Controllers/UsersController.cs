@@ -28,6 +28,14 @@ public class UsersController : ControllerBase
         return Ok(items);
     }
 
+    [HttpGet("order-filters")]
+    [ProducesResponseType(typeof(IReadOnlyList<UserOrderFilterOptionDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<UserOrderFilterOptionDto>>> OrderFilters(CancellationToken cancellationToken)
+    {
+        var items = await _userAdmin.ListForOrderFiltersAsync(cancellationToken);
+        return Ok(items);
+    }
+
     [HttpGet("sheet-picker-members")]
     [ProducesResponseType(typeof(IReadOnlyList<string>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<string>>> SheetPickerMembers(CancellationToken cancellationToken)

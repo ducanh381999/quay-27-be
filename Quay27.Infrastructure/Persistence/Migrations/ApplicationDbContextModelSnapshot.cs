@@ -67,6 +67,151 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.ToTable("AuditLogs");
                 });
 
+            modelBuilder.Entity("Quay27.Domain.Entities.CashbookEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<bool>("AffectsBusinessResult")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("CashbookPartyId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<Guid?>("CollectorUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("CounterpartyDisplayName")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<string>("CounterpartyScope")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("EntryType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<string>("FundType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("PartnerDebtMode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<int?>("PaymentCategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("SourceId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("SourceKind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<Guid?>("StaffUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CashbookPartyId");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("CollectorUserId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("OccurredAtUtc");
+
+                    b.HasIndex("PaymentCategoryId");
+
+                    b.HasIndex("StaffUserId");
+
+                    b.HasIndex("SourceKind", "SourceId")
+                        .IsUnique()
+                        .HasFilter("`SourceId` IS NOT NULL");
+
+                    b.ToTable("CashbookEntries", (string)null);
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.CashbookParty", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("Province")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("Ward")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.ToTable("CashbookParties", (string)null);
+                });
+
             modelBuilder.Entity("Quay27.Domain.Entities.ColumnPermission", b =>
                 {
                     b.Property<Guid>("Id")
@@ -180,6 +325,9 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<Guid?>("SalesInvoiceId")
+                        .HasColumnType("char(36)");
+
                     b.Property<DateOnly>("SheetDate")
                         .HasColumnType("date");
 
@@ -208,12 +356,16 @@ namespace Quay27.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("InvoiceCode");
 
+                    b.HasIndex("SalesInvoiceId")
+                        .IsUnique();
+
                     b.HasIndex("SheetDate");
 
                     b.ToTable("Customers");
                 });
 
             modelBuilder.Entity("Quay27.Domain.Entities.CustomerInvoiceLine", b =>
+            modelBuilder.Entity("Quay27.Domain.Entities.CustomerGroup", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -243,6 +395,34 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.HasIndex("ProductId");
 
                     b.ToTable("CustomerInvoiceLines", (string)null);
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedDate");
+
+                    b.HasIndex("IsDeleted");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("CustomerGroups", (string)null);
                 });
 
             modelBuilder.Entity("Quay27.Domain.Entities.CustomerProfile", b =>
@@ -478,6 +658,158 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.HasIndex("DuplicateGroupId");
 
                     b.ToTable("DuplicateFlags");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.GoodsReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<decimal>("Discount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<decimal>("PaidAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("ReceiptDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("SupplierDebtDelta")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("SupplierId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("Total")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("ReceiptDate");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("SupplierId");
+
+                    b.ToTable("GoodsReceipts", (string)null);
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.GoodsReceiptLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("Discount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("GoodsReceiptId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ProductCodeSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ProductNameSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("UnitSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GoodsReceiptId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("GoodsReceiptLines", (string)null);
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.PaymentCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("PaymentCategories", (string)null);
                 });
 
             modelBuilder.Entity("Quay27.Domain.Entities.PriceList", b =>
@@ -754,6 +1086,146 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.ToTable("ProductGroups", (string)null);
                 });
 
+            modelBuilder.Entity("Quay27.Domain.Entities.PurchaseOrder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("AmountDue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("AmountPaid")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("CustomerCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("CustomerName")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<Guid?>("CustomerProfileId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("DeliveryFromUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("DeliveryPartner")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<DateTime?>("DeliveryToUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("DistrictKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("ProvinceKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<Guid?>("ReceivedByUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("SaleChannelId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("SellerUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<decimal>("SubtotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedAtUtc");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("CustomerProfileId");
+
+                    b.HasIndex("ReceivedByUserId");
+
+                    b.HasIndex("SaleChannelId");
+
+                    b.HasIndex("SellerUserId");
+
+                    b.ToTable("PurchaseOrders", (string)null);
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.PurchaseOrderItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ProductCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<Guid>("PurchaseOrderId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("PurchaseOrderId");
+
+                    b.ToTable("PurchaseOrderItems", (string)null);
+                });
+
             modelBuilder.Entity("Quay27.Domain.Entities.Queue", b =>
                 {
                     b.Property<int>("Id")
@@ -775,6 +1247,176 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.ToTable("Queues", (string)null);
                 });
 
+            modelBuilder.Entity("Quay27.Domain.Entities.ReceivingAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("AccountNumber")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("BankName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name", "AccountNumber");
+
+                    b.ToTable("ReceivingAccounts", (string)null);
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.ReturnReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<decimal>("Discount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("ReturnDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("SupplierDebtDelta")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("SupplierId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("SupplierPaidAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Total")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("ReturnDate");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("SupplierId");
+
+                    b.ToTable("ReturnReceipts", (string)null);
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.ReturnReceiptLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("Discount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ImportPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ProductCodeSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ProductNameSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ReturnPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("ReturnReceiptId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("UnitSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("ReturnReceiptId");
+
+                    b.ToTable("ReturnReceiptLines", (string)null);
+                });
+
             modelBuilder.Entity("Quay27.Domain.Entities.Role", b =>
                 {
                     b.Property<int>("Id")
@@ -791,6 +1433,373 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Roles");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SaleChannel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name");
+
+                    b.ToTable("SaleChannels", (string)null);
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SalesInvoice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("CustomerCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("CustomerName")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<Guid?>("CustomerProfileId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("DeliveryFromUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("DeliveryPartner")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<string>("DeliveryStatus")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTime?>("DeliveryToUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("DistrictKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("InvoiceDeliveryType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("longtext");
+
+                    b.Property<decimal>("PaidAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<Guid?>("PriceListId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ProvinceKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("ReturnReferenceCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<Guid?>("SaleChannelId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("SellerUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<decimal>("SubtotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedAtUtc");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("CustomerProfileId");
+
+                    b.HasIndex("PriceListId");
+
+                    b.HasIndex("SaleChannelId");
+
+                    b.HasIndex("SellerUserId");
+
+                    b.ToTable("SalesInvoices", (string)null);
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SalesInvoiceItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ProductCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("SalesInvoiceId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("SalesInvoiceId");
+
+                    b.ToTable("SalesInvoiceItems", (string)null);
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SalesReturn", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("CustomerCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("CustomerName")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<Guid?>("CustomerProfileId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<bool>("ExchangeDelivery")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<decimal>("ExchangeDiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ExchangeSubtotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("HasExchangeItems")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<decimal>("NetAmountDueFromCustomer")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("OtherCollectionType")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<decimal>("PurchaseDueAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("ReceivedByUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("RefundDueAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ReturnDiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ReturnFeeAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ReturnSubtotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ReturnType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<Guid?>("SaleChannelId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("SellerUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedAtUtc");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("CustomerProfileId");
+
+                    b.HasIndex("ReceivedByUserId");
+
+                    b.HasIndex("SaleChannelId");
+
+                    b.HasIndex("SellerUserId");
+
+                    b.ToTable("SalesReturns", (string)null);
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SalesReturnExchangeItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ProductCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("SalesReturnId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("SalesReturnId");
+
+                    b.ToTable("SalesReturnExchangeItems", (string)null);
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SalesReturnItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ProductCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("SalesReturnId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("SalesReturnId");
+
+                    b.ToTable("SalesReturnItems", (string)null);
                 });
 
             modelBuilder.Entity("Quay27.Domain.Entities.SheetPickerDraftStaffName", b =>
@@ -959,6 +1968,40 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.ToTable("SupplierGroups", (string)null);
                 });
 
+            modelBuilder.Entity("Quay27.Domain.Entities.SupplierPaymentAllocation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("GoodsReceiptId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<Guid?>("ReceivingAccountId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("ReturnReceiptId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GoodsReceiptId");
+
+                    b.HasIndex("ReceivingAccountId");
+
+                    b.HasIndex("ReturnReceiptId");
+
+                    b.ToTable("SupplierPaymentAllocations", (string)null);
+                });
+
             modelBuilder.Entity("Quay27.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1010,6 +2053,54 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.HasIndex("RoleId");
 
                     b.ToTable("UserRoles");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.CashbookEntry", b =>
+                {
+                    b.HasOne("Quay27.Domain.Entities.CashbookParty", "CashbookParty")
+                        .WithMany()
+                        .HasForeignKey("CashbookPartyId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Quay27.Domain.Entities.User", "CollectorUser")
+                        .WithMany()
+                        .HasForeignKey("CollectorUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Quay27.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Quay27.Domain.Entities.PaymentCategory", "PaymentCategory")
+                        .WithMany()
+                        .HasForeignKey("PaymentCategoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Quay27.Domain.Entities.User", "StaffUser")
+                        .WithMany()
+                        .HasForeignKey("StaffUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CashbookParty");
+
+                    b.Navigation("CollectorUser");
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("PaymentCategory");
+
+                    b.Navigation("StaffUser");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.CashbookParty", b =>
+                {
+                    b.HasOne("Quay27.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedByUser");
                 });
 
             modelBuilder.Entity("Quay27.Domain.Entities.ColumnPermission", b =>
@@ -1069,6 +2160,21 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.HasOne("Quay27.Domain.Entities.Customer", "Customer")
                         .WithMany("InvoiceLines")
                         .HasForeignKey("CustomerId")
+            modelBuilder.Entity("Quay27.Domain.Entities.GoodsReceipt", b =>
+                {
+                    b.HasOne("Quay27.Domain.Entities.Supplier", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Supplier");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.GoodsReceiptLine", b =>
+                {
+                    b.HasOne("Quay27.Domain.Entities.GoodsReceipt", "GoodsReceipt")
+                        .WithMany("Lines")
+                        .HasForeignKey("GoodsReceiptId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -1078,6 +2184,10 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Customer");
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("GoodsReceipt");
 
                     b.Navigation("Product");
                 });
@@ -1119,6 +2229,225 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.Navigation("Parent");
                 });
 
+            modelBuilder.Entity("Quay27.Domain.Entities.PurchaseOrder", b =>
+                {
+                    b.HasOne("Quay27.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Quay27.Domain.Entities.CustomerProfile", "CustomerProfile")
+                        .WithMany()
+                        .HasForeignKey("CustomerProfileId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Quay27.Domain.Entities.User", "ReceivedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReceivedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Quay27.Domain.Entities.SaleChannel", "SaleChannel")
+                        .WithMany()
+                        .HasForeignKey("SaleChannelId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Quay27.Domain.Entities.User", "SellerUser")
+                        .WithMany()
+                        .HasForeignKey("SellerUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("CustomerProfile");
+
+                    b.Navigation("ReceivedByUser");
+
+                    b.Navigation("SaleChannel");
+
+                    b.Navigation("SellerUser");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.PurchaseOrderItem", b =>
+                {
+                    b.HasOne("Quay27.Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Quay27.Domain.Entities.PurchaseOrder", "PurchaseOrder")
+                        .WithMany("Items")
+                        .HasForeignKey("PurchaseOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("PurchaseOrder");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.ReturnReceipt", b =>
+                {
+                    b.HasOne("Quay27.Domain.Entities.Supplier", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Supplier");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.ReturnReceiptLine", b =>
+                {
+                    b.HasOne("Quay27.Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Quay27.Domain.Entities.ReturnReceipt", "ReturnReceipt")
+                        .WithMany("Lines")
+                        .HasForeignKey("ReturnReceiptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("ReturnReceipt");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SalesInvoice", b =>
+                {
+                    b.HasOne("Quay27.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Quay27.Domain.Entities.CustomerProfile", "CustomerProfile")
+                        .WithMany()
+                        .HasForeignKey("CustomerProfileId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Quay27.Domain.Entities.PriceList", "PriceList")
+                        .WithMany()
+                        .HasForeignKey("PriceListId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Quay27.Domain.Entities.SaleChannel", "SaleChannel")
+                        .WithMany()
+                        .HasForeignKey("SaleChannelId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Quay27.Domain.Entities.User", "SellerUser")
+                        .WithMany()
+                        .HasForeignKey("SellerUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("CustomerProfile");
+
+                    b.Navigation("PriceList");
+
+                    b.Navigation("SaleChannel");
+
+                    b.Navigation("SellerUser");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SalesInvoiceItem", b =>
+                {
+                    b.HasOne("Quay27.Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Quay27.Domain.Entities.SalesInvoice", "SalesInvoice")
+                        .WithMany("Items")
+                        .HasForeignKey("SalesInvoiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("SalesInvoice");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SalesReturn", b =>
+                {
+                    b.HasOne("Quay27.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Quay27.Domain.Entities.CustomerProfile", "CustomerProfile")
+                        .WithMany()
+                        .HasForeignKey("CustomerProfileId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Quay27.Domain.Entities.User", "ReceivedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReceivedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Quay27.Domain.Entities.SaleChannel", "SaleChannel")
+                        .WithMany()
+                        .HasForeignKey("SaleChannelId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Quay27.Domain.Entities.User", "SellerUser")
+                        .WithMany()
+                        .HasForeignKey("SellerUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("CustomerProfile");
+
+                    b.Navigation("ReceivedByUser");
+
+                    b.Navigation("SaleChannel");
+
+                    b.Navigation("SellerUser");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SalesReturnExchangeItem", b =>
+                {
+                    b.HasOne("Quay27.Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Quay27.Domain.Entities.SalesReturn", "SalesReturn")
+                        .WithMany("ExchangeItems")
+                        .HasForeignKey("SalesReturnId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("SalesReturn");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SalesReturnItem", b =>
+                {
+                    b.HasOne("Quay27.Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Quay27.Domain.Entities.SalesReturn", "SalesReturn")
+                        .WithMany("ReturnItems")
+                        .HasForeignKey("SalesReturnId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("SalesReturn");
+                });
+
             modelBuilder.Entity("Quay27.Domain.Entities.Supplier", b =>
                 {
                     b.HasOne("Quay27.Domain.Entities.SupplierGroup", "SupplierGroup")
@@ -1127,6 +2456,30 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("SupplierGroup");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SupplierPaymentAllocation", b =>
+                {
+                    b.HasOne("Quay27.Domain.Entities.GoodsReceipt", "GoodsReceipt")
+                        .WithMany("PaymentAllocations")
+                        .HasForeignKey("GoodsReceiptId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Quay27.Domain.Entities.ReceivingAccount", "ReceivingAccount")
+                        .WithMany()
+                        .HasForeignKey("ReceivingAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Quay27.Domain.Entities.ReturnReceipt", "ReturnReceipt")
+                        .WithMany("PaymentAllocations")
+                        .HasForeignKey("ReturnReceiptId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("GoodsReceipt");
+
+                    b.Navigation("ReceivingAccount");
+
+                    b.Navigation("ReturnReceipt");
                 });
 
             modelBuilder.Entity("Quay27.Domain.Entities.UserRole", b =>
@@ -1159,6 +2512,13 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.Navigation("InvoiceLines");
                 });
 
+            modelBuilder.Entity("Quay27.Domain.Entities.GoodsReceipt", b =>
+                {
+                    b.Navigation("Lines");
+
+                    b.Navigation("PaymentAllocations");
+                });
+
             modelBuilder.Entity("Quay27.Domain.Entities.PriceList", b =>
                 {
                     b.Navigation("Items");
@@ -1171,14 +2531,38 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.Navigation("Products");
                 });
 
+            modelBuilder.Entity("Quay27.Domain.Entities.PurchaseOrder", b =>
+                {
+                    b.Navigation("Items");
+                });
+
             modelBuilder.Entity("Quay27.Domain.Entities.Queue", b =>
                 {
                     b.Navigation("CustomerQueues");
                 });
 
+            modelBuilder.Entity("Quay27.Domain.Entities.ReturnReceipt", b =>
+                {
+                    b.Navigation("Lines");
+
+                    b.Navigation("PaymentAllocations");
+                });
+
             modelBuilder.Entity("Quay27.Domain.Entities.Role", b =>
                 {
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SalesInvoice", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SalesReturn", b =>
+                {
+                    b.Navigation("ExchangeItems");
+
+                    b.Navigation("ReturnItems");
                 });
 
             modelBuilder.Entity("Quay27.Domain.Entities.SupplierGroup", b =>

@@ -4,6 +4,9 @@ public class Customer
 {
     public Guid Id { get; set; }
 
+    /// <summary>When set, this sheet row was created from the given sales invoice (idempotent sync).</summary>
+    public Guid? SalesInvoiceId { get; set; }
+
     /// <summary>Sheet column stt — display order within a day.</summary>
     public int SortOrder { get; set; }
 

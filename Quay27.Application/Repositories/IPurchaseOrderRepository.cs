@@ -1,0 +1,16 @@
+using Quay27.Application.Orders;
+using Quay27.Domain.Entities;
+
+namespace Quay27.Application.Repositories;
+
+public interface IPurchaseOrderRepository
+{
+    Task<IReadOnlyList<PurchaseOrderListItemDto>> ListAsync(PurchaseOrderListQuery query,
+        CancellationToken cancellationToken = default);
+
+    Task<string> GenerateNextCodeAsync(CancellationToken cancellationToken = default);
+
+    Task AddAsync(PurchaseOrder entity, CancellationToken cancellationToken = default);
+
+    Task<PurchaseOrder?> GetTrackedByIdAsync(Guid id, CancellationToken cancellationToken = default);
+}

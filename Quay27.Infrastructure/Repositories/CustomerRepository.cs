@@ -125,6 +125,24 @@ public class CustomerRepository : ICustomerRepository
     public Task AddAsync(Customer customer, CancellationToken cancellationToken = default) =>
         _db.Customers.AddAsync(customer, cancellationToken).AsTask();
 
+    public async Task<int> GetNextSortOrderForSheetDateAsync(DateOnly sheetDate, CancellationToken cancellationToken = default)
+    {
+        var max = await _db.Customers.AsNoTracking()
+            .Where(c => !c.IsDeleted && c.SheetDate == sheetDate)
+            .Select(c => (int?)c.SortOrder)
+            .MaxAsync(cancellationToken);
+        return (max ?? 0) + 1;
+    }
+
+    public async Task<Guid?> FindCustomerIdBySalesInvoiceIdAsync(Guid salesInvoiceId, CancellationToken cancellationToken = default)
+    {
+        var id = await _db.Customers.AsNoTracking()
+            .Where(c => !c.IsDeleted && c.SalesInvoiceId == salesInvoiceId)
+            .Select(c => (Guid?)c.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+        return id;
+    }
+
     public async Task<bool> SoftDeleteAsync(Guid id, string updatedBy, CancellationToken cancellationToken = default)
     {
         var entity = await _db.Customers.FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted, cancellationToken);

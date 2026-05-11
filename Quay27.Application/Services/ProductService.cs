@@ -795,7 +795,7 @@ public class ProductService : IProductService
         return new ProductListItemDto
         {
             Id = x.Id,
-            ImageUrl = x.ImageUrl,
+            ImageUrl = ProductMappings.NormalizeDisplayImageUrl(x.ImageUrl),
             Code = x.Code,
             Name = x.Name,
             ItemType = x.ItemType,

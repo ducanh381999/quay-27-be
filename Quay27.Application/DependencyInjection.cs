@@ -27,6 +27,13 @@ public static class DependencyInjection
         services.AddScoped<IGoodsReceiptService, GoodsReceiptService>();
         services.AddScoped<IReturnReceiptService, ReturnReceiptService>();
         services.AddScoped<IReceivingAccountService, ReceivingAccountService>();
+        services.AddScoped<ISaleChannelService, SaleChannelService>();
+        services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
+        services.AddScoped<ISalesInvoiceService, SalesInvoiceService>();
+        services.AddScoped<ISalesReturnService, SalesReturnService>();
+        services.AddScoped<IPaymentCategoryService, PaymentCategoryService>();
+        services.AddScoped<ICashbookService, CashbookService>();
+        services.AddScoped<ICashbookSyncService, CashbookSyncService>();
         return services;
     }
 }

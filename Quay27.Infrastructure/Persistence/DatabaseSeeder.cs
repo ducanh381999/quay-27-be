@@ -15,6 +15,8 @@ public static class DatabaseSeeder
     {
         await db.Database.MigrateAsync(cancellationToken);
 
+        await EnsureSaleChannelsAsync(db, logger, cancellationToken);
+
         if (await db.Roles.AnyAsync(cancellationToken))
             return;
 
@@ -40,6 +42,37 @@ public static class DatabaseSeeder
         db.Users.Add(admin);
         db.UserRoles.Add(new UserRole { UserId = admin.Id, RoleId = 1 });
 
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static readonly Guid SaleChannelDirectId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1");
+    private static readonly Guid SaleChannelOtherId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2");
+
+    private static async Task EnsureSaleChannelsAsync(ApplicationDbContext db, ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        if (await db.SaleChannels.AnyAsync(cancellationToken))
+            return;
+
+        logger.LogInformation("Seeding default sale channels.");
+        var utc = DateTime.UtcNow;
+        db.SaleChannels.AddRange(
+            new SaleChannel
+            {
+                Id = SaleChannelDirectId,
+                Name = "Bán trực tiếp",
+                Description = null,
+                IsActive = true,
+                CreatedAtUtc = utc
+            },
+            new SaleChannel
+            {
+                Id = SaleChannelOtherId,
+                Name = "Khác",
+                Description = null,
+                IsActive = true,
+                CreatedAtUtc = utc
+            });
         await db.SaveChangesAsync(cancellationToken);
     }
 }
