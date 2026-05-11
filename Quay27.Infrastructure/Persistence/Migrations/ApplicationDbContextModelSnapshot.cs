@@ -213,6 +213,38 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.ToTable("Customers");
                 });
 
+            modelBuilder.Entity("Quay27.Domain.Entities.CustomerInvoiceLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("ProductId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ProductNameSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("CustomerInvoiceLines", (string)null);
+                });
+
             modelBuilder.Entity("Quay27.Domain.Entities.CustomerProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1032,6 +1064,24 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.Navigation("Customer");
                 });
 
+            modelBuilder.Entity("Quay27.Domain.Entities.CustomerInvoiceLine", b =>
+                {
+                    b.HasOne("Quay27.Domain.Entities.Customer", "Customer")
+                        .WithMany("InvoiceLines")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Quay27.Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("Quay27.Domain.Entities.PriceListItem", b =>
                 {
                     b.HasOne("Quay27.Domain.Entities.PriceList", "PriceList")
@@ -1105,6 +1155,8 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.Navigation("CustomerVersions");
 
                     b.Navigation("DuplicateFlags");
+
+                    b.Navigation("InvoiceLines");
                 });
 
             modelBuilder.Entity("Quay27.Domain.Entities.PriceList", b =>

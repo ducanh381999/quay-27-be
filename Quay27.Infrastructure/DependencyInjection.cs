@@ -57,6 +57,7 @@ public static class DependencyInjection
         services.AddScoped<IReturnReceiptRepository, ReturnReceiptRepository>();
         services.AddScoped<IReceivingAccountRepository, ReceivingAccountRepository>();
         services.AddScoped<IEndOfDayService, EndOfDayService>();
+        services.AddScoped<IDashboardService, DashboardService>();
         services.AddOptions<R2StorageOptions>()
             .Bind(configuration.GetSection(R2StorageOptions.SectionName));
         services.AddScoped<IObjectStorageClient, R2ObjectStorageClient>();

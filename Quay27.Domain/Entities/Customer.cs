@@ -55,4 +55,5 @@ public class Customer
     public ICollection<CustomerQueue> CustomerQueues { get; set; } = new List<CustomerQueue>();
     public ICollection<DuplicateFlag> DuplicateFlags { get; set; } = new List<DuplicateFlag>();
     public ICollection<CustomerVersion> CustomerVersions { get; set; } = new List<CustomerVersion>();
+    public ICollection<CustomerInvoiceLine> InvoiceLines { get; set; } = new List<CustomerInvoiceLine>();
 }

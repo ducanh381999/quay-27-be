@@ -35,6 +35,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<ReturnReceiptLine> ReturnReceiptLines => Set<ReturnReceiptLine>();
     public DbSet<SupplierPaymentAllocation> SupplierPaymentAllocations => Set<SupplierPaymentAllocation>();
     public DbSet<ReceivingAccount> ReceivingAccounts => Set<ReceivingAccount>();
+    public DbSet<CustomerInvoiceLine> CustomerInvoiceLines => Set<CustomerInvoiceLine>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -87,6 +88,25 @@ public class ApplicationDbContext : DbContext
             e.Property(x => x.UpdatedBy).HasMaxLength(256);
             e.HasIndex(x => x.SheetDate);
             e.HasIndex(x => x.InvoiceCode);
+            e.HasMany(x => x.InvoiceLines)
+                .WithOne(x => x.Customer)
+                .HasForeignKey(x => x.CustomerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CustomerInvoiceLine>(e =>
+        {
+            e.ToTable("CustomerInvoiceLines");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.ProductNameSnapshot).HasMaxLength(256).IsRequired();
+            e.Property(x => x.Quantity).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Amount).HasColumnType("decimal(18,2)");
+            e.HasIndex(x => x.CustomerId);
+            e.HasIndex(x => x.ProductId);
+            e.HasOne(x => x.Product)
+                .WithMany()
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Queue>(e =>
