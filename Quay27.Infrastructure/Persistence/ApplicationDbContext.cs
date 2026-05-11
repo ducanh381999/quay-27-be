@@ -35,6 +35,18 @@ public class ApplicationDbContext : DbContext
     public DbSet<ReturnReceiptLine> ReturnReceiptLines => Set<ReturnReceiptLine>();
     public DbSet<SupplierPaymentAllocation> SupplierPaymentAllocations => Set<SupplierPaymentAllocation>();
     public DbSet<ReceivingAccount> ReceivingAccounts => Set<ReceivingAccount>();
+    public DbSet<SaleChannel> SaleChannels => Set<SaleChannel>();
+    public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
+    public DbSet<PurchaseOrderItem> PurchaseOrderItems => Set<PurchaseOrderItem>();
+    public DbSet<SalesInvoice> SalesInvoices => Set<SalesInvoice>();
+    public DbSet<SalesInvoiceItem> SalesInvoiceItems => Set<SalesInvoiceItem>();
+    public DbSet<SalesReturn> SalesReturns => Set<SalesReturn>();
+    public DbSet<SalesReturnItem> SalesReturnItems => Set<SalesReturnItem>();
+    public DbSet<SalesReturnExchangeItem> SalesReturnExchangeItems => Set<SalesReturnExchangeItem>();
+    public DbSet<PaymentCategory> PaymentCategories => Set<PaymentCategory>();
+    public DbSet<CashbookParty> CashbookParties => Set<CashbookParty>();
+    public DbSet<CashbookEntry> CashbookEntries => Set<CashbookEntry>();
+    public DbSet<CustomerInvoiceLine> CustomerInvoiceLines => Set<CustomerInvoiceLine>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

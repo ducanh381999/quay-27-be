@@ -1,4 +1,7 @@
+using ClosedXML.Excel;
+using FluentValidation;
 using Quay27.Application.Abstractions;
+using Quay27.Application.Common;
 using Quay27.Application.Common.Exceptions;
 using Quay27.Application.CustomerProfiles;
 using Quay27.Application.Repositories;
@@ -11,15 +14,18 @@ public class CustomerProfileService : ICustomerProfileService
     private readonly ICustomerProfileRepository _profiles;
     private readonly ICurrentUser _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IValidator<CreateCustomerProfileRequest> _createValidator;
 
     public CustomerProfileService(
         ICustomerProfileRepository profiles,
         ICurrentUser currentUser,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IValidator<CreateCustomerProfileRequest> createValidator)
     {
         _profiles = profiles;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _createValidator = createValidator;
     }
 
     public async Task<IReadOnlyList<CustomerProfileDto>> ListAsync(string? search = null,
@@ -28,6 +34,26 @@ public class CustomerProfileService : ICustomerProfileService
         EnsureAuthenticated();
         var list = await _profiles.ListAsync(search, cancellationToken);
         return list.Select(Map).ToList();
+    }
+
+    public async Task<PagedResult<CustomerProfileListItemDto>> ListPagedAsync(CustomerProfileListQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        var (items, totalCount) = await _profiles.ListPagedAsync(query, cancellationToken);
+        if (items.Count == 0)
+            return new PagedResult<CustomerProfileListItemDto> { Items = Array.Empty<CustomerProfileListItemDto>(), TotalCount = totalCount };
+
+        var ids = items.Select(x => x.Id).ToList();
+        var agg = await _profiles.GetSalesAggregatesByProfileIdsAsync(ids, cancellationToken);
+        var list = items.Select(p =>
+        {
+            var a = agg.GetValueOrDefault(p.Id, new CustomerProfileSalesAggregate(0m, 0m, 0m));
+            var net = a.TotalPaid - a.ReturnTotal;
+            return MapListItem(p, a.TotalPaid, net, a.Debt);
+        }).ToList();
+
+        return new PagedResult<CustomerProfileListItemDto> { Items = list, TotalCount = totalCount };
     }
 
     public async Task<CustomerProfileDto> GetAsync(Guid id, CancellationToken cancellationToken = default)
@@ -39,17 +65,100 @@ public class CustomerProfileService : ICustomerProfileService
         return Map(item);
     }
 
-    public async Task<CustomerProfileDto> CreateAsync(CreateCustomerProfileRequest request,
+    public Task<CustomerProfileDto> CreateAsync(CreateCustomerProfileRequest request,
+        CancellationToken cancellationToken = default) =>
+        CreateInternalAsync(request, explicitCustomerCode: null, cancellationToken);
+
+    public async Task<ImportCustomerProfilesExcelResult> ImportExcelAsync(ImportCustomerProfilesExcelRequest request,
         CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+
+        if (request.FileBytes.Length == 0)
+            throw new ConflictException("File import rỗng.");
+
+        var ext = Path.GetExtension(request.FileName ?? string.Empty);
+        if (!string.Equals(ext, ".xlsx", StringComparison.OrdinalIgnoreCase))
+            throw new ConflictException("Chỉ hỗ trợ file .xlsx.");
+
+        using var workbook = new XLWorkbook(new MemoryStream(request.FileBytes, writable: false));
+        var (worksheet, headerMap) = CustomerProfileExcelReader.ResolveWorksheetAndHeaders(workbook);
+        var rows = CustomerProfileExcelReader.ReadRows(worksheet, headerMap);
+
+        var imported = 0;
+        var skipped = 0;
+        var failed = 0;
+        var errors = new List<string>();
+
+        foreach (var row in rows)
+        {
+            if (string.IsNullOrWhiteSpace(row.Request.CustomerName))
+            {
+                skipped++;
+                continue;
+            }
+
+            if (request.SkipDuplicatesByPhone && !string.IsNullOrWhiteSpace(row.Request.Phone1))
+            {
+                if (await _profiles.ExistsActiveByPhone1Async(row.Request.Phone1.Trim(), cancellationToken))
+                {
+                    skipped++;
+                    continue;
+                }
+            }
+
+            var vr = await _createValidator.ValidateAsync(row.Request, cancellationToken);
+            if (!vr.IsValid)
+            {
+                failed++;
+                if (errors.Count < 40)
+                {
+                    errors.Add(
+                        $"Dòng {row.RowNumber}: {string.Join("; ", vr.Errors.Select(e => e.ErrorMessage))}");
+                }
+
+                continue;
+            }
+
+            try
+            {
+                await _unitOfWork.ExecuteInTransactionAsync(async () =>
+                {
+                    await CreateInternalAsync(row.Request, row.CustomerCode, cancellationToken);
+                }, cancellationToken);
+                imported++;
+            }
+            catch (Exception ex)
+            {
+                failed++;
+                if (errors.Count < 40)
+                    errors.Add($"Dòng {row.RowNumber}: {ex.Message}");
+            }
+        }
+
+        return new ImportCustomerProfilesExcelResult(rows.Count, imported, skipped, failed, errors);
+    }
+
+    private async Task<CustomerProfileDto> CreateInternalAsync(CreateCustomerProfileRequest request,
+        string? explicitCustomerCode,
+        CancellationToken cancellationToken)
     {
         EnsureAuthenticated();
         var username = _currentUser.Username;
         var now = DateTime.UtcNow;
 
+        var customerCode = string.IsNullOrWhiteSpace(explicitCustomerCode)
+            ? await GenerateCustomerCodeAsync(cancellationToken)
+            : explicitCustomerCode.Trim();
+
+        if (!string.IsNullOrWhiteSpace(explicitCustomerCode) &&
+            await _profiles.CustomerCodeExistsAsync(customerCode, cancellationToken))
+            throw new ConflictException($"Mã khách hàng '{customerCode}' đã tồn tại.");
+
         var entity = new CustomerProfile
         {
             Id = Guid.NewGuid(),
-            CustomerCode = await GenerateCustomerCodeAsync(cancellationToken),
+            CustomerCode = customerCode,
             CustomerName = request.CustomerName.Trim(),
             Phone1 = request.Phone1.Trim(),
             Phone2 = request.Phone2.Trim(),
@@ -153,6 +262,46 @@ public class CustomerProfileService : ICustomerProfileService
 
         throw new ConflictException("Cannot generate customer code, please retry.");
     }
+
+    private static CustomerProfileListItemDto MapListItem(CustomerProfile x, decimal totalSales, decimal totalSalesNet,
+        decimal currentDebt) =>
+        new()
+        {
+            Id = x.Id,
+            CustomerCode = x.CustomerCode,
+            CustomerName = x.CustomerName,
+            Phone1 = x.Phone1,
+            Phone2 = x.Phone2,
+            Birthday = x.Birthday,
+            Gender = x.Gender,
+            Email = x.Email,
+            Facebook = x.Facebook,
+            Address = x.Address,
+            ProvinceCity = x.ProvinceCity,
+            Ward = x.Ward,
+            CustomerGroup = x.CustomerGroup,
+            Note = x.Note,
+            BuyerType = x.BuyerType,
+            BuyerName = x.BuyerName,
+            TaxCode = x.TaxCode,
+            InvoiceAddress = x.InvoiceAddress,
+            InvoiceProvinceCity = x.InvoiceProvinceCity,
+            InvoiceWard = x.InvoiceWard,
+            IdentityNumber = x.IdentityNumber,
+            PassportNumber = x.PassportNumber,
+            InvoiceEmail = x.InvoiceEmail,
+            InvoicePhone = x.InvoicePhone,
+            BankName = x.BankName,
+            BankAccountNumber = x.BankAccountNumber,
+            CreatedDate = x.CreatedDate,
+            CreatedBy = x.CreatedBy,
+            UpdatedDate = x.UpdatedDate,
+            UpdatedBy = x.UpdatedBy,
+            IsActive = !x.IsDeleted,
+            TotalSales = totalSales,
+            TotalSalesNet = totalSalesNet,
+            CurrentDebt = currentDebt,
+        };
 
     private static CustomerProfileDto Map(CustomerProfile x) =>
         new()

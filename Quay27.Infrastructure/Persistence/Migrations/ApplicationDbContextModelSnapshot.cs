@@ -365,7 +365,6 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("Quay27.Domain.Entities.CustomerInvoiceLine", b =>
-            modelBuilder.Entity("Quay27.Domain.Entities.CustomerGroup", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -395,6 +394,14 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.HasIndex("ProductId");
 
                     b.ToTable("CustomerInvoiceLines", (string)null);
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.CustomerGroup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime(6)");
 
@@ -2160,6 +2167,19 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.HasOne("Quay27.Domain.Entities.Customer", "Customer")
                         .WithMany("InvoiceLines")
                         .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Quay27.Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("Quay27.Domain.Entities.GoodsReceipt", b =>
                 {
                     b.HasOne("Quay27.Domain.Entities.Supplier", "Supplier")
@@ -2181,9 +2201,6 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.HasOne("Quay27.Domain.Entities.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Customer");
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
