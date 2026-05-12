@@ -11,15 +11,18 @@ public class CustomerGroupService : ICustomerGroupService
     private readonly ICustomerGroupRepository _groups;
     private readonly ICurrentUser _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICustomerGroupMembershipSyncService _membershipSync;
 
     public CustomerGroupService(
         ICustomerGroupRepository groups,
         ICurrentUser currentUser,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ICustomerGroupMembershipSyncService membershipSync)
     {
         _groups = groups;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _membershipSync = membershipSync;
     }
 
     public async Task<IReadOnlyList<CustomerGroupDto>> ListAsync(
@@ -40,7 +43,7 @@ public class CustomerGroupService : ICustomerGroupService
             {
                 Id = x.Id,
                 Name = x.Name,
-                Children = Array.Empty<CustomerGroupTreeDto>()
+                Children = Array.Empty<CustomerGroupTreeDto>(),
             })
             .ToList();
     }
@@ -54,15 +57,26 @@ public class CustomerGroupService : ICustomerGroupService
         if (await _groups.NameExistsAsync(name, null, cancellationToken))
             throw new ConflictException("Customer group name already exists.");
 
+        var mode = NormalizeMode(request.MembershipUpdateMode);
         var entity = new CustomerGroup
         {
             Id = Guid.NewGuid(),
             Name = name,
             Description = NormalizeNullable(request.Description),
-            CreatedDate = DateTime.UtcNow
+            DiscountAmount = request.DiscountAmount,
+            DiscountIsPercent = request.DiscountIsPercent,
+            RulesJson = CustomerGroupRulesJson.SerializeConditions(request.Conditions),
+            CombineAllConditions = request.CombineAllConditions,
+            MembershipUpdateMode = mode,
+            IsAutoMembershipSync = mode == "none" ? false : request.IsAutoMembershipSync,
+            CreatedDate = DateTime.UtcNow,
         };
         await _groups.AddAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        if (mode != "none")
+            await _membershipSync.SyncAsync(entity.Id, cancellationToken);
+
         return Map(entity);
     }
 
@@ -80,10 +94,21 @@ public class CustomerGroupService : ICustomerGroupService
         if (await _groups.NameExistsAsync(name, id, cancellationToken))
             throw new ConflictException("Customer group name already exists.");
 
+        var mode = NormalizeMode(request.MembershipUpdateMode);
         item.Name = name;
         item.Description = NormalizeNullable(request.Description);
+        item.DiscountAmount = request.DiscountAmount;
+        item.DiscountIsPercent = request.DiscountIsPercent;
+        item.RulesJson = CustomerGroupRulesJson.SerializeConditions(request.Conditions);
+        item.CombineAllConditions = request.CombineAllConditions;
+        item.MembershipUpdateMode = mode;
+        item.IsAutoMembershipSync = mode == "none" ? false : request.IsAutoMembershipSync;
         item.UpdatedDate = DateTime.UtcNow;
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        if (mode != "none")
+            await _membershipSync.SyncAsync(item.Id, cancellationToken);
+
         return Map(item);
     }
 
@@ -97,6 +122,12 @@ public class CustomerGroupService : ICustomerGroupService
         item.IsDeleted = true;
         item.UpdatedDate = DateTime.UtcNow;
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    private static string NormalizeMode(string? mode)
+    {
+        var m = (mode ?? "none").Trim().ToLowerInvariant();
+        return m is "add" or "replace" or "none" ? m : "none";
     }
 
     private void EnsureAuthenticated()
@@ -114,7 +145,13 @@ public class CustomerGroupService : ICustomerGroupService
             Id = x.Id,
             Name = x.Name,
             Description = x.Description,
+            DiscountAmount = x.DiscountAmount,
+            DiscountIsPercent = x.DiscountIsPercent,
+            Conditions = CustomerGroupRulesJson.DeserializeConditions(x.RulesJson).ToList(),
+            CombineAllConditions = x.CombineAllConditions,
+            MembershipUpdateMode = x.MembershipUpdateMode,
+            IsAutoMembershipSync = x.IsAutoMembershipSync,
             CreatedDate = x.CreatedDate,
-            UpdatedDate = x.UpdatedDate
+            UpdatedDate = x.UpdatedDate,
         };
 }

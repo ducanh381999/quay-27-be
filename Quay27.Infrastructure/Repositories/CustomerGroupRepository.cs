@@ -52,4 +52,11 @@ public class CustomerGroupRepository : ICustomerGroupRepository
 
     public Task AddAsync(CustomerGroup group, CancellationToken cancellationToken = default) =>
         _db.CustomerGroups.AddAsync(group, cancellationToken).AsTask();
+
+    public async Task<IReadOnlyList<CustomerGroup>> ListForAutoMembershipSyncAsync(
+        CancellationToken cancellationToken = default) =>
+        await _db.CustomerGroups.AsNoTracking()
+            .Where(x => !x.IsDeleted && x.IsAutoMembershipSync && x.MembershipUpdateMode != "none")
+            .OrderBy(x => x.Name)
+            .ToListAsync(cancellationToken);
 }

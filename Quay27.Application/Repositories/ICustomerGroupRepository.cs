@@ -10,4 +10,6 @@ public interface ICustomerGroupRepository
     Task<CustomerGroup?> GetTrackedByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<bool> NameExistsAsync(string name, Guid? excludeId = null, CancellationToken cancellationToken = default);
     Task AddAsync(CustomerGroup group, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<CustomerGroup>> ListForAutoMembershipSyncAsync(CancellationToken cancellationToken = default);
 }

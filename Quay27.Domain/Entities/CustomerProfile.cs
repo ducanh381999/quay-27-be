@@ -35,6 +35,10 @@ public class CustomerProfile
     /// <summary>When set, CRM grid "current debt" shows this value instead of invoice-derived debt.</summary>
     public decimal? ManualCurrentDebt { get; set; }
 
+    public decimal RewardPointsBalance { get; set; }
+
+    public decimal RewardPointsLifetime { get; set; }
+
     public DateTime CreatedDate { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public DateTime? UpdatedDate { get; set; }

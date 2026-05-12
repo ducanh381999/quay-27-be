@@ -1,3 +1,4 @@
+using Quay27.Application.CustomerGroups;
 using Quay27.Application.CustomerProfiles;
 using Quay27.Domain.Entities;
 
@@ -24,4 +25,19 @@ public interface ICustomerProfileRepository
     Task AddAsync(CustomerProfile profile, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<string>> ListDistinctCreatorsAsync(CancellationToken cancellationToken = default);
+
+    Task<HashSet<Guid>> FindActiveProfileIdsMatchingGroupConditionsAsync(
+        IReadOnlyList<CustomerGroupConditionDto> conditions,
+        bool combineAll,
+        CancellationToken cancellationToken = default);
+
+    Task ClearCustomerGroupFromProfilesNotInMatchingSetAsync(
+        string groupName,
+        IReadOnlyCollection<Guid> matchingProfileIds,
+        CancellationToken cancellationToken = default);
+
+    Task AssignCustomerGroupToProfileIdsAsync(
+        string groupName,
+        IReadOnlyCollection<Guid> profileIds,
+        CancellationToken cancellationToken = default);
 }

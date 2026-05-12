@@ -182,6 +182,8 @@ public class ApplicationDbContext : DbContext
             e.Property(x => x.BankName).HasMaxLength(128);
             e.Property(x => x.BankAccountNumber).HasMaxLength(64);
             e.Property(x => x.ManualCurrentDebt).HasPrecision(18, 4);
+            e.Property(x => x.RewardPointsBalance).HasPrecision(18, 4).HasDefaultValue(0m);
+            e.Property(x => x.RewardPointsLifetime).HasPrecision(18, 4).HasDefaultValue(0m);
             e.Property(x => x.CreatedBy).HasMaxLength(256).IsRequired();
             e.Property(x => x.UpdatedBy).HasMaxLength(256);
             e.HasIndex(x => x.CustomerCode).IsUnique();
@@ -195,6 +197,12 @@ public class ApplicationDbContext : DbContext
             e.HasKey(x => x.Id);
             e.Property(x => x.Name).HasMaxLength(128).IsRequired();
             e.Property(x => x.Description).HasMaxLength(512);
+            e.Property(x => x.DiscountAmount).HasPrecision(18, 4);
+            e.Property(x => x.DiscountIsPercent).HasDefaultValue(false);
+            e.Property(x => x.RulesJson).HasColumnType("longtext").IsRequired();
+            e.Property(x => x.CombineAllConditions).HasDefaultValue(true);
+            e.Property(x => x.MembershipUpdateMode).HasMaxLength(16).IsRequired().HasDefaultValue("none");
+            e.Property(x => x.IsAutoMembershipSync).HasDefaultValue(false);
             e.HasIndex(x => x.Name).IsUnique();
             e.HasIndex(x => x.IsDeleted);
             e.HasIndex(x => x.CreatedDate);

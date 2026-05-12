@@ -20,6 +20,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 builder.Services.Configure<CorsOptions>(builder.Configuration.GetSection(CorsOptions.SectionName));
+builder.Services.Configure<CustomerGroupAutoSyncOptions>(
+    builder.Configuration.GetSection(CustomerGroupAutoSyncOptions.SectionName));
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
     ?? throw new InvalidOperationException("Jwt configuration is missing.");
 
@@ -110,6 +112,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 builder.Services.AddHostedService<EndOfDayBackgroundService>();
+builder.Services.AddHostedService<CustomerGroupAutoSyncBackgroundService>();
 
 var app = builder.Build();
 

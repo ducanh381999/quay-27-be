@@ -64,6 +64,7 @@ public static class DependencyInjection
         services.AddScoped<ICashbookRepository, CashbookRepository>();
         services.AddScoped<IEndOfDayService, EndOfDayService>();
         services.AddScoped<IDashboardService, DashboardService>();
+        services.AddScoped<ICustomerGroupMembershipSyncService, CustomerGroupMembershipSyncService>();
         services.AddOptions<R2StorageOptions>()
             .Bind(configuration.GetSection(R2StorageOptions.SectionName));
         services.AddScoped<IObjectStorageClient, R2ObjectStorageClient>();

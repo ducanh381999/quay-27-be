@@ -6,7 +6,7 @@ using Quay27.Infrastructure.Persistence;
 
 namespace Quay27.Infrastructure.Repositories;
 
-public class CustomerProfileRepository : ICustomerProfileRepository
+public partial class CustomerProfileRepository : ICustomerProfileRepository
 {
     private readonly ApplicationDbContext _db;
 
@@ -23,8 +23,10 @@ public class CustomerProfileRepository : ICustomerProfileRepository
         var st = query.SalesActivityToUtc;
         var useSalesWindow = sf.HasValue || st.HasValue;
 
-        var invAgg = _db.SalesInvoices.AsNoTracking()
-            .Where(i => i.CustomerProfileId != null && i.Status != "cancelled")
+        var invBase = _db.SalesInvoices.AsNoTracking()
+            .Where(i => i.CustomerProfileId != null && i.Status != "cancelled");
+
+        var invAgg = invBase
             .GroupBy(i => i.CustomerProfileId!.Value)
             .Select(g => new
             {
@@ -32,11 +34,6 @@ public class CustomerProfileRepository : ICustomerProfileRepository
                 TotalPaidAll = g.Sum(x => x.PaidAmount),
                 DebtAll = g.Sum(x => x.SubtotalAmount - x.DiscountAmount - x.PaidAmount),
                 LastInvoiceAt = g.Max(x => (DateTime?)x.CreatedAtUtc),
-                TotalPaidInWindow = g.Sum(x =>
-                    (!sf.HasValue || x.CreatedAtUtc >= sf.Value) &&
-                    (!st.HasValue || x.CreatedAtUtc <= st.Value)
-                        ? x.PaidAmount
-                        : 0m),
             });
 
         var retAgg = _db.SalesReturns.AsNoTracking()
@@ -46,63 +43,87 @@ public class CustomerProfileRepository : ICustomerProfileRepository
 
         var profiles = ApplyListFilters(_db.CustomerProfiles.AsNoTracking(), query);
 
+        // Paid-in-window: when no date filter, winQ == invBase so PaidInWindow matches TotalPaidAll (EF-translatable).
+        var winQ = invBase;
+        if (useSalesWindow)
+        {
+            if (sf.HasValue)
+            {
+                var fromUtc = sf.Value;
+                winQ = winQ.Where(i => i.CreatedAtUtc >= fromUtc);
+            }
+
+            if (st.HasValue)
+            {
+                var toUtc = st.Value;
+                winQ = winQ.Where(i => i.CreatedAtUtc <= toUtc);
+            }
+        }
+
+        var invWindow = winQ
+            .GroupBy(i => i.CustomerProfileId!.Value)
+            .Select(g => new { Id = g.Key, PaidInWindow = g.Sum(x => x.PaidAmount) });
+
         var joined =
             from p in profiles
             join ia in invAgg on p.Id equals ia.Id into iaG
             from ia in iaG.DefaultIfEmpty()
+            join iw in invWindow on p.Id equals iw.Id into iwG
+            from iw in iwG.DefaultIfEmpty()
             join ra in retAgg on p.Id equals ra.Id into raG
             from ra in raG.DefaultIfEmpty()
-            let totalPaidAll = ia != null ? ia.TotalPaidAll : 0m
-            let totalPaidFilter = useSalesWindow
-                ? (ia != null ? ia.TotalPaidInWindow : 0m)
-                : totalPaidAll
-            let invoiceDebt = ia != null ? ia.DebtAll : 0m
-            let displayDebt = p.ManualCurrentDebt ?? invoiceDebt
-            let lastInv = ia != null ? ia.LastInvoiceAt : (DateTime?)null
-            let returnTotal = ra != null ? ra.ReturnTotal : 0m
-            select new { p, totalPaidAll, invoiceDebt, returnTotal, displayDebt, totalPaidFilter, lastInv };
+            select new
+            {
+                Profile = p,
+                TotalPaidAll = ia != null ? ia.TotalPaidAll : 0m,
+                InvoiceDebt = ia != null ? ia.DebtAll : 0m,
+                ReturnTotal = ra != null ? ra.ReturnTotal : 0m,
+                DisplayDebt = p.ManualCurrentDebt ?? (ia != null ? ia.DebtAll : 0m),
+                LastInv = ia != null ? ia.LastInvoiceAt : (DateTime?)null,
+                TotalPaidFilter = iw != null ? iw.PaidInWindow : 0m,
+            };
 
         var filtered = joined;
 
         if (query.LastInvoiceAtFrom.HasValue)
         {
             var from = query.LastInvoiceAtFrom.Value;
-            filtered = filtered.Where(x => x.lastInv != null && x.lastInv >= from);
+            filtered = filtered.Where(x => x.LastInv != null && x.LastInv >= from);
         }
 
         if (query.LastInvoiceAtTo.HasValue)
         {
             var to = query.LastInvoiceAtTo.Value;
-            filtered = filtered.Where(x => x.lastInv != null && x.lastInv <= to);
+            filtered = filtered.Where(x => x.LastInv != null && x.LastInv <= to);
         }
 
         if (query.TotalSalesMin.HasValue)
         {
             var min = query.TotalSalesMin.Value;
-            filtered = filtered.Where(x => x.totalPaidFilter >= min);
+            filtered = filtered.Where(x => x.TotalPaidFilter >= min);
         }
 
         if (query.TotalSalesMax.HasValue)
         {
             var max = query.TotalSalesMax.Value;
-            filtered = filtered.Where(x => x.totalPaidFilter <= max);
+            filtered = filtered.Where(x => x.TotalPaidFilter <= max);
         }
 
         if (query.CurrentDebtMin.HasValue)
         {
             var min = query.CurrentDebtMin.Value;
-            filtered = filtered.Where(x => x.displayDebt >= min);
+            filtered = filtered.Where(x => x.DisplayDebt >= min);
         }
 
         if (query.CurrentDebtMax.HasValue)
         {
             var max = query.CurrentDebtMax.Value;
-            filtered = filtered.Where(x => x.displayDebt <= max);
+            filtered = filtered.Where(x => x.DisplayDebt <= max);
         }
 
         var ordered = filtered
-            .OrderByDescending(x => x.p.CreatedDate)
-            .ThenBy(x => x.p.CustomerName);
+            .OrderByDescending(x => x.Profile.CreatedDate)
+            .ThenBy(x => x.Profile.CustomerName);
 
         var totalCount = await ordered.CountAsync(cancellationToken);
         var take = Math.Clamp(query.Take <= 0 ? 50 : query.Take, 1, 200);
@@ -111,7 +132,7 @@ public class CustomerProfileRepository : ICustomerProfileRepository
         var slice = await ordered
             .Skip(skip)
             .Take(take)
-            .Select(x => new { x.p.Id, x.totalPaidAll, x.invoiceDebt, x.returnTotal })
+            .Select(x => new { x.Profile.Id, x.TotalPaidAll, x.InvoiceDebt, x.ReturnTotal })
             .ToListAsync(cancellationToken);
 
         if (slice.Count == 0)
@@ -126,9 +147,9 @@ public class CustomerProfileRepository : ICustomerProfileRepository
         var items = slice.Select(s => new CustomerProfileListPageRow
         {
             Profile = dict[s.Id],
-            TotalPaid = s.totalPaidAll,
-            ReturnTotal = s.returnTotal,
-            InvoiceDebt = s.invoiceDebt,
+            TotalPaid = s.TotalPaidAll,
+            ReturnTotal = s.ReturnTotal,
+            InvoiceDebt = s.InvoiceDebt,
         }).ToList();
 
         return (items, totalCount);
