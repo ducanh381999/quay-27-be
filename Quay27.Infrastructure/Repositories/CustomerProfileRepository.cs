@@ -26,26 +26,6 @@ public partial class CustomerProfileRepository : ICustomerProfileRepository
         var invBase = _db.SalesInvoices.AsNoTracking()
             .Where(i => i.CustomerProfileId != null && i.Status != "cancelled");
 
-        var invAgg = invBase
-            .GroupBy(i => i.CustomerProfileId!.Value)
-            .Select(g => new
-            {
-                Id = g.Key,
-                // MySQL SUM can be NULL; coalesce so EF never reads NULL into non-nullable decimal.
-                TotalPaidAll = g.Sum(x => (decimal?)x.PaidAmount) ?? 0m,
-                DebtAll = g.Sum(x => (decimal?)(x.SubtotalAmount - x.DiscountAmount - x.PaidAmount)) ?? 0m,
-                LastInvoiceAt = g.Max(x => (DateTime?)x.CreatedAtUtc),
-            });
-
-        var retAgg = _db.SalesReturns.AsNoTracking()
-            .Where(r => r.CustomerProfileId != null && r.Status != "cancelled")
-            .GroupBy(r => r.CustomerProfileId!.Value)
-            .Select(g => new
-            {
-                Id = g.Key,
-                ReturnTotal = g.Sum(x => (decimal?)x.Amount) ?? 0m,
-            });
-
         var profiles = ApplyListFilters(_db.CustomerProfiles.AsNoTracking(), query);
 
         // Paid-in-window: when no date filter, winQ == invBase so PaidInWindow matches TotalPaidAll (EF-translatable).
@@ -65,32 +45,29 @@ public partial class CustomerProfileRepository : ICustomerProfileRepository
             }
         }
 
-        var invWindow = winQ
-            .GroupBy(i => i.CustomerProfileId!.Value)
-            .Select(g => new
-            {
-                Id = g.Key,
-                PaidInWindow = g.Sum(x => (decimal?)x.PaidAmount) ?? 0m,
-            });
+        var retBase = _db.SalesReturns.AsNoTracking()
+            .Where(r => r.CustomerProfileId != null && r.Status != "cancelled");
 
-        var joined =
-            from p in profiles
-            join ia in invAgg on p.Id equals ia.Id into iaG
-            from ia in iaG.DefaultIfEmpty()
-            join iw in invWindow on p.Id equals iw.Id into iwG
-            from iw in iwG.DefaultIfEmpty()
-            join ra in retAgg on p.Id equals ra.Id into raG
-            from ra in raG.DefaultIfEmpty()
-            select new
-            {
-                Profile = p,
-                TotalPaidAll = ia != null ? ia.TotalPaidAll ?? 0m : 0m,
-                InvoiceDebt = ia != null ? ia.DebtAll ?? 0m : 0m,
-                ReturnTotal = ra != null ? ra.ReturnTotal ?? 0m : 0m,
-                DisplayDebt = p.ManualCurrentDebt ?? (ia != null ? ia.DebtAll ?? 0m : 0m),
-                LastInv = ia != null ? ia.LastInvoiceAt : (DateTime?)null,
-                TotalPaidFilter = iw != null ? iw.PaidInWindow ?? 0m : 0m,
-            };
+        // Correlated scalar subqueries per profile — avoids LEFT JOIN + GroupBy shapes where joined `Id`
+        // is NULL for customers with no invoices/returns, which EF materializes as non-nullable Guid and throws.
+        var joined = profiles.Select(p => new
+        {
+            Profile = p,
+            TotalPaidAll = invBase.Where(i => i.CustomerProfileId == p.Id)
+                .Sum(i => (decimal?)i.PaidAmount) ?? 0m,
+            InvoiceDebt = invBase.Where(i => i.CustomerProfileId == p.Id)
+                .Sum(i => (decimal?)(i.SubtotalAmount - i.DiscountAmount - i.PaidAmount)) ?? 0m,
+            ReturnTotal = retBase.Where(r => r.CustomerProfileId == p.Id)
+                .Sum(r => (decimal?)r.Amount) ?? 0m,
+            DisplayDebt = p.ManualCurrentDebt ?? (invBase.Where(i => i.CustomerProfileId == p.Id)
+                .Sum(i => (decimal?)(i.SubtotalAmount - i.DiscountAmount - i.PaidAmount)) ?? 0m),
+            LastInv = invBase.Where(i => i.CustomerProfileId == p.Id)
+                .OrderByDescending(i => i.CreatedAtUtc)
+                .Select(i => (DateTime?)i.CreatedAtUtc)
+                .FirstOrDefault(),
+            TotalPaidFilter = winQ.Where(i => i.CustomerProfileId == p.Id)
+                .Sum(i => (decimal?)i.PaidAmount) ?? 0m,
+        });
 
         var filtered = joined;
 

@@ -107,4 +107,39 @@ public class CustomerProfileRepositoryListPagedTests
         Assert.Equal(30m, row.TotalPaid);
         Assert.Equal(60m, row.InvoiceDebt);
     }
+
+    [Fact]
+    public async Task ListPagedAsync_mixed_profiles_with_and_without_invoices_all_materialize()
+    {
+        await using var db = new ApplicationDbContext(NewInMemoryOptions());
+        await db.Database.EnsureCreatedAsync();
+        var noInvId = Guid.NewGuid();
+        var withInvId = Guid.NewGuid();
+        db.CustomerProfiles.Add(NewProfile(noInvId, "NOINV"));
+        db.CustomerProfiles.Add(NewProfile(withInvId, "HASINV"));
+        db.SalesInvoices.Add(new SalesInvoice
+        {
+            Id = Guid.NewGuid(),
+            Code = "INV-2",
+            CreatedAtUtc = new DateTime(2026, 3, 1, 8, 0, 0, DateTimeKind.Utc),
+            CustomerProfileId = withInvId,
+            Status = "completed",
+            SubtotalAmount = 50m,
+            DiscountAmount = 0m,
+            PaidAmount = 50m,
+        });
+        await db.SaveChangesAsync();
+        var repo = new CustomerProfileRepository(db);
+
+        var (items, total) = await repo.ListPagedAsync(new CustomerProfileListQuery { Take = 20, Skip = 0 });
+
+        Assert.Equal(2, total);
+        Assert.Equal(2, items.Count);
+        var noInv = items.Single(x => x.Profile.Id == noInvId);
+        Assert.Equal(0m, noInv.TotalPaid);
+        Assert.Equal(0m, noInv.InvoiceDebt);
+        var withInv = items.Single(x => x.Profile.Id == withInvId);
+        Assert.Equal(50m, withInv.TotalPaid);
+        Assert.Equal(0m, withInv.InvoiceDebt);
+    }
 }
