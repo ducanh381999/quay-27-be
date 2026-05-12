@@ -22,7 +22,7 @@ public static class CustomerGroupRulesJson
             return Array.Empty<CustomerGroupConditionDto>();
         try
         {
-            var list = JsonSerializer.Deserialize<List<CustomerGroupConditionDto>>(json, Options);
+            var list = JsonSerializer.Deserialize<CustomerGroupConditionDto[]>(json, Options);
             return list ?? Array.Empty<CustomerGroupConditionDto>();
         }
         catch
