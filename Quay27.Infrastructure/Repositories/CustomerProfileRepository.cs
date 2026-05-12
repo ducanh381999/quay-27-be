@@ -31,15 +31,20 @@ public partial class CustomerProfileRepository : ICustomerProfileRepository
             .Select(g => new
             {
                 Id = g.Key,
-                TotalPaidAll = g.Sum(x => x.PaidAmount),
-                DebtAll = g.Sum(x => x.SubtotalAmount - x.DiscountAmount - x.PaidAmount),
+                // MySQL SUM can be NULL; coalesce so EF never reads NULL into non-nullable decimal.
+                TotalPaidAll = g.Sum(x => (decimal?)x.PaidAmount) ?? 0m,
+                DebtAll = g.Sum(x => (decimal?)(x.SubtotalAmount - x.DiscountAmount - x.PaidAmount)) ?? 0m,
                 LastInvoiceAt = g.Max(x => (DateTime?)x.CreatedAtUtc),
             });
 
         var retAgg = _db.SalesReturns.AsNoTracking()
             .Where(r => r.CustomerProfileId != null && r.Status != "cancelled")
             .GroupBy(r => r.CustomerProfileId!.Value)
-            .Select(g => new { Id = g.Key, ReturnTotal = g.Sum(x => x.Amount) });
+            .Select(g => new
+            {
+                Id = g.Key,
+                ReturnTotal = g.Sum(x => (decimal?)x.Amount) ?? 0m,
+            });
 
         var profiles = ApplyListFilters(_db.CustomerProfiles.AsNoTracking(), query);
 
@@ -62,7 +67,11 @@ public partial class CustomerProfileRepository : ICustomerProfileRepository
 
         var invWindow = winQ
             .GroupBy(i => i.CustomerProfileId!.Value)
-            .Select(g => new { Id = g.Key, PaidInWindow = g.Sum(x => x.PaidAmount) });
+            .Select(g => new
+            {
+                Id = g.Key,
+                PaidInWindow = g.Sum(x => (decimal?)x.PaidAmount) ?? 0m,
+            });
 
         var joined =
             from p in profiles
@@ -75,12 +84,12 @@ public partial class CustomerProfileRepository : ICustomerProfileRepository
             select new
             {
                 Profile = p,
-                TotalPaidAll = ia != null ? ia.TotalPaidAll : 0m,
-                InvoiceDebt = ia != null ? ia.DebtAll : 0m,
-                ReturnTotal = ra != null ? ra.ReturnTotal : 0m,
-                DisplayDebt = p.ManualCurrentDebt ?? (ia != null ? ia.DebtAll : 0m),
+                TotalPaidAll = ia != null ? ia.TotalPaidAll ?? 0m : 0m,
+                InvoiceDebt = ia != null ? ia.DebtAll ?? 0m : 0m,
+                ReturnTotal = ra != null ? ra.ReturnTotal ?? 0m : 0m,
+                DisplayDebt = p.ManualCurrentDebt ?? (ia != null ? ia.DebtAll ?? 0m : 0m),
                 LastInv = ia != null ? ia.LastInvoiceAt : (DateTime?)null,
-                TotalPaidFilter = iw != null ? iw.PaidInWindow : 0m,
+                TotalPaidFilter = iw != null ? iw.PaidInWindow ?? 0m : 0m,
             };
 
         var filtered = joined;
