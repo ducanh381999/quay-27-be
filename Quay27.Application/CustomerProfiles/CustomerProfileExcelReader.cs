@@ -7,7 +7,8 @@ namespace Quay27.Application.CustomerProfiles;
 
 internal static class CustomerProfileExcelReader
 {
-    internal sealed record ParsedRow(int RowNumber, string? CustomerCode, CreateCustomerProfileRequest Request);
+    internal sealed record ParsedRow(int RowNumber, string? CustomerCode, CreateCustomerProfileRequest Request,
+        decimal? ClosingDebtFromFile);
 
     public static (IXLWorksheet Worksheet, Dictionary<string, int> HeaderMap) ResolveWorksheetAndHeaders(
         XLWorkbook workbook)
@@ -67,8 +68,9 @@ internal static class CustomerProfileExcelReader
 
             var codeRaw = Cell(row, headerMap, "customercode");
             var customerCode = string.IsNullOrWhiteSpace(codeRaw) ? null : codeRaw.Trim();
+            var closingDebt = ParseDecimalCell(row, headerMap, "closingdebt");
 
-            list.Add(new ParsedRow(rowNo, customerCode, req));
+            list.Add(new ParsedRow(rowNo, customerCode, req, closingDebt));
         }
 
         return list;
@@ -106,6 +108,25 @@ internal static class CustomerProfileExcelReader
 
     private static string Cell(IXLRow row, IReadOnlyDictionary<string, int> map, string key) =>
         map.TryGetValue(key, out var col) ? row.Cell(col).GetString().Trim() : string.Empty;
+
+    private static decimal? ParseDecimalCell(IXLRow row, IReadOnlyDictionary<string, int> map, string key)
+    {
+        if (!map.TryGetValue(key, out var col))
+            return null;
+        var cell = row.Cell(col);
+        if (cell.IsEmpty())
+            return null;
+        if (cell.DataType == XLDataType.Number && cell.TryGetValue<decimal>(out var d))
+            return d;
+        var s = cell.GetString().Trim();
+        if (s.Length == 0)
+            return null;
+        if (decimal.TryParse(s, NumberStyles.Number, CultureInfo.GetCultureInfo("vi-VN"), out var vi))
+            return vi;
+        if (decimal.TryParse(s, NumberStyles.Number, CultureInfo.InvariantCulture, out var inv))
+            return inv;
+        return null;
+    }
 
     private static Dictionary<string, int> BuildHeaderMap(IXLWorksheet worksheet)
     {
@@ -261,6 +282,13 @@ internal static class CustomerProfileExcelReader
             case "stk":
             case "bankaccountnumber":
                 Set("bankaccountnumber");
+                return;
+            case "dunocuoi":
+            case "duno":
+            case "congnohientai":
+            case "manualcurrentdebt":
+            case "closingdebt":
+                Set("closingdebt");
                 return;
         }
     }

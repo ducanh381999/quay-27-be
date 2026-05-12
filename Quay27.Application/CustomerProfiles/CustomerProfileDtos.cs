@@ -28,6 +28,10 @@ public sealed class CustomerProfileDto
     public string InvoicePhone { get; init; } = string.Empty;
     public string BankName { get; init; } = string.Empty;
     public string BankAccountNumber { get; init; } = string.Empty;
+
+    /// <summary>Override for displayed CRM debt; null means use invoice aggregate.</summary>
+    public decimal? ManualCurrentDebt { get; init; }
+
     public DateTime CreatedDate { get; init; }
     public string CreatedBy { get; init; } = string.Empty;
     public DateTime? UpdatedDate { get; init; }
@@ -88,4 +92,10 @@ public sealed class PatchCustomerProfileRequest
     public string? InvoicePhone { get; set; }
     public string? BankName { get; set; }
     public string? BankAccountNumber { get; set; }
+
+    /// <summary>When set (including 0), assigns manual CRM debt override.</summary>
+    public decimal? ManualCurrentDebt { get; set; }
+
+    /// <summary>When true, clears the manual debt override.</summary>
+    public bool? ClearManualCurrentDebt { get; set; }
 }

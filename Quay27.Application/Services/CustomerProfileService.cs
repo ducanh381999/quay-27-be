@@ -40,17 +40,14 @@ public class CustomerProfileService : ICustomerProfileService
         CancellationToken cancellationToken = default)
     {
         EnsureAuthenticated();
-        var (items, totalCount) = await _profiles.ListPagedAsync(query, cancellationToken);
-        if (items.Count == 0)
+        var (rows, totalCount) = await _profiles.ListPagedAsync(query, cancellationToken);
+        if (rows.Count == 0)
             return new PagedResult<CustomerProfileListItemDto> { Items = Array.Empty<CustomerProfileListItemDto>(), TotalCount = totalCount };
 
-        var ids = items.Select(x => x.Id).ToList();
-        var agg = await _profiles.GetSalesAggregatesByProfileIdsAsync(ids, cancellationToken);
-        var list = items.Select(p =>
+        var list = rows.Select(r =>
         {
-            var a = agg.GetValueOrDefault(p.Id, new CustomerProfileSalesAggregate(0m, 0m, 0m));
-            var net = a.TotalPaid - a.ReturnTotal;
-            return MapListItem(p, a.TotalPaid, net, a.Debt);
+            var net = r.TotalPaid - r.ReturnTotal;
+            return MapListItem(r.Profile, r.TotalPaid, net, r.InvoiceDebt);
         }).ToList();
 
         return new PagedResult<CustomerProfileListItemDto> { Items = list, TotalCount = totalCount };
@@ -67,7 +64,7 @@ public class CustomerProfileService : ICustomerProfileService
 
     public Task<CustomerProfileDto> CreateAsync(CreateCustomerProfileRequest request,
         CancellationToken cancellationToken = default) =>
-        CreateInternalAsync(request, explicitCustomerCode: null, cancellationToken);
+        CreateInternalAsync(request, explicitCustomerCode: null, cancellationToken, manualCurrentDebtOverride: null);
 
     public async Task<ImportCustomerProfilesExcelResult> ImportExcelAsync(ImportCustomerProfilesExcelRequest request,
         CancellationToken cancellationToken = default)
@@ -107,6 +104,21 @@ public class CustomerProfileService : ICustomerProfileService
                 }
             }
 
+            if (!request.AllowDuplicateCustomerEmails && !string.IsNullOrWhiteSpace(row.Request.Email))
+            {
+                if (await _profiles.ExistsActiveByEmailAsync(row.Request.Email.Trim(), cancellationToken))
+                {
+                    failed++;
+                    if (errors.Count < 40)
+                    {
+                        errors.Add(
+                            $"Dòng {row.RowNumber}: Email đã tồn tại trên hồ sơ khách hàng khác.");
+                    }
+
+                    continue;
+                }
+            }
+
             var vr = await _createValidator.ValidateAsync(row.Request, cancellationToken);
             if (!vr.IsValid)
             {
@@ -122,9 +134,13 @@ public class CustomerProfileService : ICustomerProfileService
 
             try
             {
+                decimal? manualDebt = null;
+                if (request.UpdateClosingDebt && row.ClosingDebtFromFile.HasValue)
+                    manualDebt = row.ClosingDebtFromFile;
+
                 await _unitOfWork.ExecuteInTransactionAsync(async () =>
                 {
-                    await CreateInternalAsync(row.Request, row.CustomerCode, cancellationToken);
+                    await CreateInternalAsync(row.Request, row.CustomerCode, cancellationToken, manualDebt);
                 }, cancellationToken);
                 imported++;
             }
@@ -139,9 +155,16 @@ public class CustomerProfileService : ICustomerProfileService
         return new ImportCustomerProfilesExcelResult(rows.Count, imported, skipped, failed, errors);
     }
 
+    public async Task<IReadOnlyList<string>> ListDistinctCreatorsAsync(CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        return await _profiles.ListDistinctCreatorsAsync(cancellationToken);
+    }
+
     private async Task<CustomerProfileDto> CreateInternalAsync(CreateCustomerProfileRequest request,
         string? explicitCustomerCode,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        decimal? manualCurrentDebtOverride = null)
     {
         EnsureAuthenticated();
         var username = _currentUser.Username;
@@ -186,6 +209,7 @@ public class CustomerProfileService : ICustomerProfileService
             CreatedDate = now,
             CreatedBy = username,
             IsDeleted = false,
+            ManualCurrentDebt = manualCurrentDebtOverride,
         };
 
         await _profiles.AddAsync(entity, cancellationToken);
@@ -226,6 +250,11 @@ public class CustomerProfileService : ICustomerProfileService
         if (request.BankName is not null) item.BankName = request.BankName.Trim();
         if (request.BankAccountNumber is not null) item.BankAccountNumber = request.BankAccountNumber.Trim();
 
+        if (request.ClearManualCurrentDebt == true)
+            item.ManualCurrentDebt = null;
+        else if (request.ManualCurrentDebt.HasValue)
+            item.ManualCurrentDebt = request.ManualCurrentDebt;
+
         item.UpdatedBy = _currentUser.Username;
         item.UpdatedDate = DateTime.UtcNow;
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -264,7 +293,7 @@ public class CustomerProfileService : ICustomerProfileService
     }
 
     private static CustomerProfileListItemDto MapListItem(CustomerProfile x, decimal totalSales, decimal totalSalesNet,
-        decimal currentDebt) =>
+        decimal computedInvoiceDebt) =>
         new()
         {
             Id = x.Id,
@@ -300,7 +329,7 @@ public class CustomerProfileService : ICustomerProfileService
             IsActive = !x.IsDeleted,
             TotalSales = totalSales,
             TotalSalesNet = totalSalesNet,
-            CurrentDebt = currentDebt,
+            CurrentDebt = x.ManualCurrentDebt ?? computedInvoiceDebt,
         };
 
     private static CustomerProfileDto Map(CustomerProfile x) =>
@@ -332,6 +361,7 @@ public class CustomerProfileService : ICustomerProfileService
             InvoicePhone = x.InvoicePhone,
             BankName = x.BankName,
             BankAccountNumber = x.BankAccountNumber,
+            ManualCurrentDebt = x.ManualCurrentDebt,
             CreatedDate = x.CreatedDate,
             CreatedBy = x.CreatedBy,
             UpdatedDate = x.UpdatedDate,

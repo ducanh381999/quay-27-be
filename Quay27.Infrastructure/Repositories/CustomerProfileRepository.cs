@@ -15,16 +15,122 @@ public class CustomerProfileRepository : ICustomerProfileRepository
         _db = db;
     }
 
-    public async Task<(IReadOnlyList<CustomerProfile> Items, int TotalCount)> ListPagedAsync(
+    public async Task<(IReadOnlyList<CustomerProfileListPageRow> Items, int TotalCount)> ListPagedAsync(
         CustomerProfileListQuery query,
         CancellationToken cancellationToken = default)
     {
-        var q = ApplyListFilters(_db.CustomerProfiles.AsNoTracking(), query);
-        q = q.OrderByDescending(x => x.CreatedDate).ThenBy(x => x.CustomerName);
-        var totalCount = await q.CountAsync(cancellationToken);
+        var sf = query.SalesActivityFromUtc;
+        var st = query.SalesActivityToUtc;
+        var useSalesWindow = sf.HasValue || st.HasValue;
+
+        var invAgg = _db.SalesInvoices.AsNoTracking()
+            .Where(i => i.CustomerProfileId != null && i.Status != "cancelled")
+            .GroupBy(i => i.CustomerProfileId!.Value)
+            .Select(g => new
+            {
+                Id = g.Key,
+                TotalPaidAll = g.Sum(x => x.PaidAmount),
+                DebtAll = g.Sum(x => x.SubtotalAmount - x.DiscountAmount - x.PaidAmount),
+                LastInvoiceAt = g.Max(x => (DateTime?)x.CreatedAtUtc),
+                TotalPaidInWindow = g.Sum(x =>
+                    (!sf.HasValue || x.CreatedAtUtc >= sf.Value) &&
+                    (!st.HasValue || x.CreatedAtUtc <= st.Value)
+                        ? x.PaidAmount
+                        : 0m),
+            });
+
+        var retAgg = _db.SalesReturns.AsNoTracking()
+            .Where(r => r.CustomerProfileId != null && r.Status != "cancelled")
+            .GroupBy(r => r.CustomerProfileId!.Value)
+            .Select(g => new { Id = g.Key, ReturnTotal = g.Sum(x => x.Amount) });
+
+        var profiles = ApplyListFilters(_db.CustomerProfiles.AsNoTracking(), query);
+
+        var joined =
+            from p in profiles
+            join ia in invAgg on p.Id equals ia.Id into iaG
+            from ia in iaG.DefaultIfEmpty()
+            join ra in retAgg on p.Id equals ra.Id into raG
+            from ra in raG.DefaultIfEmpty()
+            let totalPaidAll = ia != null ? ia.TotalPaidAll : 0m
+            let totalPaidFilter = useSalesWindow
+                ? (ia != null ? ia.TotalPaidInWindow : 0m)
+                : totalPaidAll
+            let invoiceDebt = ia != null ? ia.DebtAll : 0m
+            let displayDebt = p.ManualCurrentDebt ?? invoiceDebt
+            let lastInv = ia != null ? ia.LastInvoiceAt : (DateTime?)null
+            let returnTotal = ra != null ? ra.ReturnTotal : 0m
+            select new { p, totalPaidAll, invoiceDebt, returnTotal, displayDebt, totalPaidFilter, lastInv };
+
+        var filtered = joined;
+
+        if (query.LastInvoiceAtFrom.HasValue)
+        {
+            var from = query.LastInvoiceAtFrom.Value;
+            filtered = filtered.Where(x => x.lastInv != null && x.lastInv >= from);
+        }
+
+        if (query.LastInvoiceAtTo.HasValue)
+        {
+            var to = query.LastInvoiceAtTo.Value;
+            filtered = filtered.Where(x => x.lastInv != null && x.lastInv <= to);
+        }
+
+        if (query.TotalSalesMin.HasValue)
+        {
+            var min = query.TotalSalesMin.Value;
+            filtered = filtered.Where(x => x.totalPaidFilter >= min);
+        }
+
+        if (query.TotalSalesMax.HasValue)
+        {
+            var max = query.TotalSalesMax.Value;
+            filtered = filtered.Where(x => x.totalPaidFilter <= max);
+        }
+
+        if (query.CurrentDebtMin.HasValue)
+        {
+            var min = query.CurrentDebtMin.Value;
+            filtered = filtered.Where(x => x.displayDebt >= min);
+        }
+
+        if (query.CurrentDebtMax.HasValue)
+        {
+            var max = query.CurrentDebtMax.Value;
+            filtered = filtered.Where(x => x.displayDebt <= max);
+        }
+
+        var ordered = filtered
+            .OrderByDescending(x => x.p.CreatedDate)
+            .ThenBy(x => x.p.CustomerName);
+
+        var totalCount = await ordered.CountAsync(cancellationToken);
         var take = Math.Clamp(query.Take <= 0 ? 50 : query.Take, 1, 200);
         var skip = Math.Max(0, query.Skip);
-        var items = await q.Skip(skip).Take(take).ToListAsync(cancellationToken);
+
+        var slice = await ordered
+            .Skip(skip)
+            .Take(take)
+            .Select(x => new { x.p.Id, x.totalPaidAll, x.invoiceDebt, x.returnTotal })
+            .ToListAsync(cancellationToken);
+
+        if (slice.Count == 0)
+            return (Array.Empty<CustomerProfileListPageRow>(), totalCount);
+
+        var ids = slice.Select(s => s.Id).ToList();
+        var profs = await _db.CustomerProfiles.AsNoTracking()
+            .Where(p => ids.Contains(p.Id))
+            .ToListAsync(cancellationToken);
+        var dict = profs.ToDictionary(p => p.Id);
+
+        var items = slice.Select(s => new CustomerProfileListPageRow
+        {
+            Profile = dict[s.Id],
+            TotalPaid = s.totalPaidAll,
+            ReturnTotal = s.returnTotal,
+            InvoiceDebt = s.invoiceDebt,
+        }).ToList();
+
         return (items, totalCount);
     }
 
@@ -62,8 +168,27 @@ public class CustomerProfileRepository : ICustomerProfileRepository
             .AnyAsync(x => !x.IsDeleted && x.Phone1 == p, cancellationToken);
     }
 
+    public Task<bool> ExistsActiveByEmailAsync(string email, CancellationToken cancellationToken = default)
+    {
+        var e = email.Trim();
+        if (e.Length == 0)
+            return Task.FromResult(false);
+        return _db.CustomerProfiles.AsNoTracking()
+            .AnyAsync(x => !x.IsDeleted && x.Email == e, cancellationToken);
+    }
+
     public Task AddAsync(CustomerProfile profile, CancellationToken cancellationToken = default) =>
         _db.CustomerProfiles.AddAsync(profile, cancellationToken).AsTask();
+
+    public async Task<IReadOnlyList<string>> ListDistinctCreatorsAsync(CancellationToken cancellationToken = default)
+    {
+        return await _db.CustomerProfiles.AsNoTracking()
+            .Where(x => !x.IsDeleted && x.CreatedBy != "")
+            .Select(x => x.CreatedBy)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToListAsync(cancellationToken);
+    }
 
     private static IQueryable<CustomerProfile> ApplyListFilters(IQueryable<CustomerProfile> source,
         CustomerProfileListQuery query)
@@ -117,54 +242,17 @@ public class CustomerProfileRepository : ICustomerProfileRepository
                 x.InvoiceProvinceCity.ToLower().Contains(d));
         }
 
+        if (!string.IsNullOrWhiteSpace(query.CreatedByContains))
+        {
+            var c = query.CreatedByContains.Trim().ToLowerInvariant();
+            q = q.Where(x => x.CreatedBy.ToLower().Contains(c));
+        }
+
+        if (query.BirthdayFrom.HasValue)
+            q = q.Where(x => x.Birthday != null && x.Birthday >= query.BirthdayFrom.Value);
+        if (query.BirthdayTo.HasValue)
+            q = q.Where(x => x.Birthday != null && x.Birthday <= query.BirthdayTo.Value);
+
         return q;
-    }
-
-    public async Task<IReadOnlyDictionary<Guid, CustomerProfileSalesAggregate>> GetSalesAggregatesByProfileIdsAsync(
-        IReadOnlyList<Guid> profileIds,
-        CancellationToken cancellationToken = default)
-    {
-        if (profileIds.Count == 0)
-            return new Dictionary<Guid, CustomerProfileSalesAggregate>();
-
-        var ids = profileIds.Distinct().ToArray();
-
-        var invoiceAgg = await _db.SalesInvoices.AsNoTracking()
-            .Where(i => i.CustomerProfileId != null && ids.Contains(i.CustomerProfileId.Value) &&
-                        i.Status != "cancelled")
-            .GroupBy(i => i.CustomerProfileId!.Value)
-            .Select(g => new
-            {
-                Id = g.Key,
-                TotalPaid = g.Sum(x => x.PaidAmount),
-                Debt = g.Sum(x => x.SubtotalAmount - x.DiscountAmount - x.PaidAmount),
-            })
-            .ToListAsync(cancellationToken);
-
-        var returnAgg = await _db.SalesReturns.AsNoTracking()
-            .Where(r => r.CustomerProfileId != null && ids.Contains(r.CustomerProfileId.Value) &&
-                        r.Status != "cancelled")
-            .GroupBy(r => r.CustomerProfileId!.Value)
-            .Select(g => new { Id = g.Key, ReturnTotal = g.Sum(x => x.Amount) })
-            .ToListAsync(cancellationToken);
-
-        var retMap = returnAgg.ToDictionary(x => x.Id, x => x.ReturnTotal);
-        var dict = new Dictionary<Guid, CustomerProfileSalesAggregate>();
-        foreach (var row in invoiceAgg)
-        {
-            var ret = retMap.GetValueOrDefault(row.Id, 0m);
-            dict[row.Id] = new CustomerProfileSalesAggregate(row.TotalPaid, ret, row.Debt);
-        }
-
-        foreach (var id in ids)
-        {
-            if (dict.ContainsKey(id))
-                continue;
-            var retOnly = retMap.GetValueOrDefault(id, 0m);
-            if (retOnly != 0m)
-                dict[id] = new CustomerProfileSalesAggregate(0m, retOnly, 0m);
-        }
-
-        return dict;
     }
 }

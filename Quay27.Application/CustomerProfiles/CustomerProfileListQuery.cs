@@ -27,4 +27,23 @@ public sealed class CustomerProfileListQuery
 
     /// <summary>Case-insensitive contains on address / ward / province and invoice address fields (OR).</summary>
     public string? DeliveryAreaText { get; set; }
+
+    /// <summary>Case-insensitive contains on CreatedBy username.</summary>
+    public string? CreatedByContains { get; set; }
+
+    public DateOnly? BirthdayFrom { get; set; }
+    public DateOnly? BirthdayTo { get; set; }
+
+    public DateTime? LastInvoiceAtFrom { get; set; }
+    public DateTime? LastInvoiceAtTo { get; set; }
+
+    public decimal? TotalSalesMin { get; set; }
+    public decimal? TotalSalesMax { get; set; }
+
+    /// <summary>When set with <see cref="SalesActivityToUtc"/>, <see cref="TotalSalesMin"/>/<see cref="TotalSalesMax"/> apply to sum of PaidAmount in that window; otherwise all-time paid sum.</summary>
+    public DateTime? SalesActivityFromUtc { get; set; }
+    public DateTime? SalesActivityToUtc { get; set; }
+
+    public decimal? CurrentDebtMin { get; set; }
+    public decimal? CurrentDebtMax { get; set; }
 }

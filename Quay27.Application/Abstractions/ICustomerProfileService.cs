@@ -16,4 +16,6 @@ public interface ICustomerProfileService
 
     Task<ImportCustomerProfilesExcelResult> ImportExcelAsync(ImportCustomerProfilesExcelRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<string>> ListDistinctCreatorsAsync(CancellationToken cancellationToken = default);
 }

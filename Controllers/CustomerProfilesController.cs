@@ -12,6 +12,12 @@ public sealed class ImportCustomerProfilesExcelForm
 
     /// <summary>When true, skip rows whose Phone1 matches an existing active profile.</summary>
     public bool SkipDuplicatesByPhone { get; set; }
+
+    /// <summary>When true, apply optional DuNoCuoi column as manual CRM debt on new profiles.</summary>
+    public bool UpdateClosingDebt { get; set; }
+
+    /// <summary>When false, reject import row if Email matches another active profile.</summary>
+    public bool AllowDuplicateCustomerEmails { get; set; }
 }
 
 [ApiController]
@@ -49,6 +55,14 @@ public class CustomerProfilesController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("creators")]
+    [ProducesResponseType(typeof(IReadOnlyList<string>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<string>>> ListCreators(CancellationToken cancellationToken)
+    {
+        var items = await _service.ListDistinctCreatorsAsync(cancellationToken);
+        return Ok(items);
+    }
+
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(CustomerProfileDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -81,7 +95,12 @@ public class CustomerProfilesController : ControllerBase
         await using var ms = new MemoryStream();
         await form.File.CopyToAsync(ms, cancellationToken);
         var result = await _service.ImportExcelAsync(
-            new ImportCustomerProfilesExcelRequest(ms.ToArray(), form.File.FileName, form.SkipDuplicatesByPhone),
+            new ImportCustomerProfilesExcelRequest(
+                ms.ToArray(),
+                form.File.FileName,
+                form.SkipDuplicatesByPhone,
+                form.UpdateClosingDebt,
+                form.AllowDuplicateCustomerEmails),
             cancellationToken);
         return Ok(result);
     }

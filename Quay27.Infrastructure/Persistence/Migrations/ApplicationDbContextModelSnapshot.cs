@@ -535,6 +535,10 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<decimal?>("ManualCurrentDebt")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
                     b.Property<string>("Note")
                         .IsRequired()
                         .HasColumnType("longtext");

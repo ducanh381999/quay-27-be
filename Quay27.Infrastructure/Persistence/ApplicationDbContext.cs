@@ -181,6 +181,7 @@ public class ApplicationDbContext : DbContext
             e.Property(x => x.InvoicePhone).HasMaxLength(32);
             e.Property(x => x.BankName).HasMaxLength(128);
             e.Property(x => x.BankAccountNumber).HasMaxLength(64);
+            e.Property(x => x.ManualCurrentDebt).HasPrecision(18, 4);
             e.Property(x => x.CreatedBy).HasMaxLength(256).IsRequired();
             e.Property(x => x.UpdatedBy).HasMaxLength(256);
             e.HasIndex(x => x.CustomerCode).IsUnique();

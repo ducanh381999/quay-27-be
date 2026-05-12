@@ -32,6 +32,9 @@ public class CustomerProfile
     public string BankName { get; set; } = string.Empty;
     public string BankAccountNumber { get; set; } = string.Empty;
 
+    /// <summary>When set, CRM grid "current debt" shows this value instead of invoice-derived debt.</summary>
+    public decimal? ManualCurrentDebt { get; set; }
+
     public DateTime CreatedDate { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public DateTime? UpdatedDate { get; set; }

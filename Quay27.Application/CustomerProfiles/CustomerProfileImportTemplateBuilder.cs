@@ -14,7 +14,7 @@ public static class CustomerProfileImportTemplateBuilder
             "TenKhachHang", "MaKhachHang", "DienThoai1", "DienThoai2", "NgaySinh", "GioiTinh", "Email", "Facebook",
             "DiaChi", "TinhThanh", "PhuongXa", "NhomKhachHang", "GhiChu", "LoaiKhachHang", "TenNguoiMuaHang",
             "MaSoThue", "DiaChiXuatHoaDon", "TinhThanhHD", "PhuongXaHD", "CMND_CCCD", "Passport", "EmailHD",
-            "DienThoaiHD", "NganHang", "SoTaiKhoan",
+            "DienThoaiHD", "NganHang", "SoTaiKhoan", "DuNoCuoi",
         };
         for (var i = 0; i < headers.Length; i++)
             ws.Cell(1, i + 1).Value = headers[i];
