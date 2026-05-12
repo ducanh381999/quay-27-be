@@ -20,9 +20,9 @@ public class PriceListItemsQueryValidator : AbstractValidator<PriceListItemsQuer
             .Must(x => string.IsNullOrWhiteSpace(x) || AllowedComparePrices.Contains(x))
             .WithMessage("comparePrice is invalid.");
 
-        RuleFor(x => x.CompareValue)
-            .GreaterThanOrEqualTo(0)
-            .When(x => x.CompareValue.HasValue);
+        RuleFor(x => x.GroupIds)
+            .Must(x => x == null || x.Count <= 200)
+            .WithMessage("groupIds must contain at most 200 entries.");
 
         RuleFor(x => x)
             .Must(x =>

@@ -1,3 +1,4 @@
+using System.Linq;
 using Quay27.Application.Products;
 using Quay27.Application.Validators;
 
@@ -31,5 +32,18 @@ public class PriceListItemsQueryValidatorTests
         });
 
         Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Should_fail_when_groupIds_exceeds_limit()
+    {
+        var tooMany = Enumerable.Range(0, 201).Select(_ => Guid.NewGuid()).ToList();
+        var result = _validator.Validate(new PriceListItemsQuery
+        {
+            PriceListIds = [Guid.NewGuid()],
+            GroupIds = tooMany,
+        });
+
+        Assert.False(result.IsValid);
     }
 }

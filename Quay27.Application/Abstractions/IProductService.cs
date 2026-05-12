@@ -19,6 +19,7 @@ public interface IProductService
     Task<PriceListDto> CreatePriceListAsync(UpsertPriceListRequest request, CancellationToken cancellationToken = default);
     Task<PriceListDto> UpdatePriceListAsync(Guid id, UpsertPriceListRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PriceListItemDto>> ListPriceListItemsAsync(PriceListItemsQuery query, CancellationToken cancellationToken = default);
+    Task SetPriceListItemManualAsync(Guid priceListId, Guid productId, decimal price, CancellationToken cancellationToken = default);
     Task AddAllProductsToPriceListAsync(Guid priceListId, bool confirmed, CancellationToken cancellationToken = default);
     Task AddProductsByGroupsToPriceListAsync(Guid priceListId, AddProductsByGroupsRequest request, CancellationToken cancellationToken = default);
     Task ApplyPriceFormulaAsync(Guid priceListId, ApplyPriceFormulaRequest request, CancellationToken cancellationToken = default);

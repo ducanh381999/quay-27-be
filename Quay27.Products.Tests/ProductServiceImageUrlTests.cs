@@ -258,7 +258,7 @@ public class ProductServiceImageUrlTests
     {
         public Task AddRangeAsync(IReadOnlyList<PriceListItem> items, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<PriceListItem?> GetTrackedAsync(Guid priceListId, Guid productId, CancellationToken cancellationToken = default) => Task.FromResult<PriceListItem?>(null);
-        public Task<IReadOnlyList<PriceListItem>> ListByPriceListIdsAsync(IReadOnlyList<Guid> priceListIds, string? search, string? groupId, string? stock, CancellationToken cancellationToken = default) => Task.FromResult((IReadOnlyList<PriceListItem>)Array.Empty<PriceListItem>());
+        public Task<IReadOnlyList<PriceListItem>> ListByPriceListIdsAsync(IReadOnlyList<Guid> priceListIds, string? search, string? groupId, string? stock, IReadOnlyList<Guid>? filterGroupIds, CancellationToken cancellationToken = default) => Task.FromResult((IReadOnlyList<PriceListItem>)Array.Empty<PriceListItem>());
     }
 
 }

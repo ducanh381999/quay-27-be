@@ -48,10 +48,17 @@ public sealed class PriceListItemsQuery
     public IReadOnlyList<Guid> PriceListIds { get; set; } = Array.Empty<Guid>();
     public string? Search { get; set; }
     public string? GroupId { get; set; }
+    /// <summary>When non-empty, products in any of these groups (after expansion) are included; takes precedence over <see cref="GroupId"/>.</summary>
+    public IReadOnlyList<Guid>? GroupIds { get; set; }
     public string? Stock { get; set; }
     public string? PriceOperator { get; set; }
     public string? ComparePrice { get; set; }
     public decimal? CompareValue { get; set; }
+}
+
+public sealed class SetPriceListItemPriceRequest
+{
+    public decimal Price { get; set; }
 }
 
 public sealed class PriceListItemDto

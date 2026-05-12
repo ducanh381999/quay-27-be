@@ -19,6 +19,7 @@ public class PriceListItemRepository : IPriceListItemRepository
         string? search,
         string? groupId,
         string? stock,
+        IReadOnlyList<Guid>? filterGroupIds,
         CancellationToken cancellationToken = default)
     {
         if (priceListIds.Count == 0)
@@ -42,7 +43,13 @@ public class PriceListItemRepository : IPriceListItemRepository
                 x.Product.Name.Contains(term));
         }
 
-        if (!string.IsNullOrWhiteSpace(groupId) && groupId != "all")
+        if (filterGroupIds is { Count: > 0 })
+        {
+            var set = filterGroupIds.ToHashSet();
+            query = query.Where(x =>
+                x.Product!.GroupId != null && set.Contains(x.Product.GroupId.Value));
+        }
+        else if (!string.IsNullOrWhiteSpace(groupId) && groupId != "all")
         {
             var term = groupId.Trim();
             var hasGuid = Guid.TryParse(term, out var groupGuid);

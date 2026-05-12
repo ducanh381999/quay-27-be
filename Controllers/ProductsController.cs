@@ -97,11 +97,11 @@ public class ProductsController : ControllerBase
         => Ok(await _service.UpdateGroupAsync(id, request, cancellationToken));
 
     [HttpDelete("{id:guid}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         await _service.DeleteAsync(id, cancellationToken);
-        return NoContent();
+        return Ok();
     }
 
     [HttpGet("groups")]
@@ -154,6 +154,7 @@ public class ProductsController : ControllerBase
         [FromQuery] List<Guid> priceListIds,
         [FromQuery] string? search,
         [FromQuery] string? groupId,
+        [FromQuery] List<Guid>? groupIds,
         [FromQuery] string? stock,
         [FromQuery] string? priceOperator,
         [FromQuery] string? comparePrice,
@@ -164,43 +165,57 @@ public class ProductsController : ControllerBase
             PriceListIds = priceListIds,
             Search = search,
             GroupId = groupId,
+            GroupIds = groupIds is { Count: > 0 } ? groupIds : null,
             Stock = stock,
             PriceOperator = priceOperator,
             ComparePrice = comparePrice,
             CompareValue = compareValue
         }, cancellationToken));
 
+    [HttpPut("price-lists/{priceListId:guid}/items/{productId:guid}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SetPriceListItemPrice(
+        Guid priceListId,
+        Guid productId,
+        [FromBody] SetPriceListItemPriceRequest request,
+        CancellationToken cancellationToken)
+    {
+        await _service.SetPriceListItemManualAsync(priceListId, productId, request.Price, cancellationToken);
+        return Ok();
+    }
+
     [HttpPost("price-lists/{id:guid}/items/add-all")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> AddAllProductsToPriceList(
         Guid id,
         [FromBody] AddAllProductsRequest? request,
         CancellationToken cancellationToken)
     {
         await _service.AddAllProductsToPriceListAsync(id, request?.Confirmed == true, cancellationToken);
-        return NoContent();
+        return Ok();
     }
 
     [HttpPost("price-lists/{id:guid}/items/add-by-groups")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> AddProductsByGroups(
         Guid id,
         [FromBody] AddProductsByGroupsRequest request,
         CancellationToken cancellationToken)
     {
         await _service.AddProductsByGroupsToPriceListAsync(id, request, cancellationToken);
-        return NoContent();
+        return Ok();
     }
 
     [HttpPost("price-lists/{id:guid}/apply-formula")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> ApplyPriceFormula(
         Guid id,
         [FromBody] ApplyPriceFormulaRequest request,
         CancellationToken cancellationToken)
     {
         await _service.ApplyPriceFormulaAsync(id, request, cancellationToken);
-        return NoContent();
+        return Ok();
     }
 
     [HttpGet("price-lists/import/template")]
@@ -239,11 +254,12 @@ public class ProductsController : ControllerBase
 
     [HttpGet("price-lists/export")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ExportPriceLists(
         [FromQuery] List<Guid> priceListIds,
         [FromQuery] string? search,
         [FromQuery] string? groupId,
+        [FromQuery] List<Guid>? groupIds,
         [FromQuery] string? stock,
         [FromQuery] string? priceOperator,
         [FromQuery] string? comparePrice,
@@ -255,6 +271,7 @@ public class ProductsController : ControllerBase
             PriceListIds = priceListIds,
             Search = search,
             GroupId = groupId,
+            GroupIds = groupIds is { Count: > 0 } ? groupIds : null,
             Stock = stock,
             PriceOperator = priceOperator,
             ComparePrice = comparePrice,
@@ -262,7 +279,7 @@ public class ProductsController : ControllerBase
         }, cancellationToken);
 
         if (bytes is null || bytes.Length == 0)
-            return NoContent();
+            return NotFound(new { title = "No export data", detail = "Không có dữ liệu để xuất file bảng giá." });
 
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"BangGia_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
     }

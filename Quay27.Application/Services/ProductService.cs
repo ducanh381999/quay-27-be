@@ -374,11 +374,25 @@ public class ProductService : IProductService
             return Array.Empty<PriceListItemDto>();
         }
 
+        string? legacyGroupId = query.GroupId;
+        IReadOnlyList<Guid>? filterGroupGuids = null;
+        if (query.GroupIds is { Count: > 0 })
+        {
+            var parsed = query.GroupIds.Where(g => g != Guid.Empty).Distinct().ToList();
+            if (parsed.Count > 0)
+            {
+                var allGroups = await _groups.ListAsync(cancellationToken);
+                filterGroupGuids = ExpandDescendantGroupIds(allGroups, parsed);
+                legacyGroupId = null;
+            }
+        }
+
         var items = await _priceListItems.ListByPriceListIdsAsync(
             query.PriceListIds,
             query.Search,
-            query.GroupId,
+            legacyGroupId,
             query.Stock,
+            filterGroupGuids,
             cancellationToken);
 
         var result = items
@@ -427,6 +441,48 @@ public class ProductService : IProductService
         return result;
     }
 
+    public async Task SetPriceListItemManualAsync(
+        Guid priceListId,
+        Guid productId,
+        decimal price,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        EnsureCanManagePriceListActions();
+
+        var list = await _priceLists.GetByIdAsync(priceListId, cancellationToken);
+        if (list is null) throw new NotFoundException("Price list not found.");
+
+        var product = await _products.GetByIdAsync(productId, cancellationToken);
+        if (product is null) throw new NotFoundException("Product not found.");
+
+        var now = DateTimeOffset.UtcNow;
+        var existing = await _priceListItems.GetTrackedAsync(priceListId, productId, cancellationToken);
+        if (existing is null)
+        {
+            await _priceListItems.AddRangeAsync(
+            [
+                new PriceListItem
+                {
+                    Id = Guid.NewGuid(),
+                    PriceListId = priceListId,
+                    ProductId = productId,
+                    Price = price,
+                    AppliedByFormula = false,
+                    CreatedAt = now
+                }
+            ], cancellationToken);
+        }
+        else
+        {
+            existing.Price = price;
+            existing.AppliedByFormula = false;
+            existing.UpdatedAt = now;
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task AddAllProductsToPriceListAsync(
         Guid priceListId,
         bool confirmed,
@@ -437,6 +493,7 @@ public class ProductService : IProductService
         if (list is null) throw new NotFoundException("Price list not found.");
         var existingItems = await _priceListItems.ListByPriceListIdsAsync(
             [priceListId],
+            null,
             null,
             null,
             null,

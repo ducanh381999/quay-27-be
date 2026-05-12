@@ -121,6 +121,6 @@ public class ProductsAuthorizationTests
     {
         public Task AddRangeAsync(IReadOnlyList<Domain.Entities.PriceListItem> items, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<Domain.Entities.PriceListItem?> GetTrackedAsync(Guid priceListId, Guid productId, CancellationToken cancellationToken = default) => Task.FromResult<Domain.Entities.PriceListItem?>(null);
-        public Task<IReadOnlyList<Domain.Entities.PriceListItem>> ListByPriceListIdsAsync(IReadOnlyList<Guid> priceListIds, string? search, string? groupId, string? stock, CancellationToken cancellationToken = default) => Task.FromResult((IReadOnlyList<Domain.Entities.PriceListItem>)Array.Empty<Domain.Entities.PriceListItem>());
+        public Task<IReadOnlyList<Domain.Entities.PriceListItem>> ListByPriceListIdsAsync(IReadOnlyList<Guid> priceListIds, string? search, string? groupId, string? stock, IReadOnlyList<Guid>? filterGroupIds, CancellationToken cancellationToken = default) => Task.FromResult((IReadOnlyList<Domain.Entities.PriceListItem>)Array.Empty<Domain.Entities.PriceListItem>());
     }
 }

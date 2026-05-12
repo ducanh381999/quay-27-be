@@ -54,11 +54,11 @@ public sealed class ReturnsController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/status")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> PatchStatus(Guid id, [FromBody] PatchOrderStatusRequest request,
         CancellationToken cancellationToken)
     {
         await _service.PatchStatusAsync(id, request, cancellationToken);
-        return NoContent();
+        return Ok();
     }
 }

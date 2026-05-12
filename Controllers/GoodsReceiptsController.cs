@@ -39,6 +39,20 @@ public class GoodsReceiptsController : ControllerBase
         return Ok(items);
     }
 
+    [HttpGet("template-excel")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DownloadTemplateExcel(CancellationToken cancellationToken)
+    {
+        var templatePath = Path.Combine(_environment.ContentRootPath, "Templates", "MauFileNhapHang.xlsx");
+        if (!System.IO.File.Exists(templatePath))
+            return NotFound(new { title = "Template not found", detail = "Không tìm thấy file template Excel trên server." });
+
+        var fileName = Path.GetFileName(templatePath);
+        var bytes = await System.IO.File.ReadAllBytesAsync(templatePath, cancellationToken);
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+    }
+
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(GoodsReceiptDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -78,19 +92,5 @@ public class GoodsReceiptsController : ControllerBase
         await form.File.CopyToAsync(ms, cancellationToken);
         var result = await _service.PreviewImportAsync(ms.ToArray(), form.File.FileName, cancellationToken);
         return Ok(result);
-    }
-
-    [HttpGet("template-excel")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DownloadTemplateExcel(CancellationToken cancellationToken)
-    {
-        var templatePath = Path.Combine(_environment.ContentRootPath, "Templates", "MauFileNhapHang.xlsx");
-        if (!System.IO.File.Exists(templatePath))
-            return NotFound(new { title = "Template not found", detail = "Không tìm thấy file template Excel trên server." });
-
-        var fileName = Path.GetFileName(templatePath);
-        var bytes = await System.IO.File.ReadAllBytesAsync(templatePath, cancellationToken);
-        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
     }
 }

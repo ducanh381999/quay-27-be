@@ -9,6 +9,7 @@ public interface IPriceListItemRepository
         string? search,
         string? groupId,
         string? stock,
+        IReadOnlyList<Guid>? filterGroupIds,
         CancellationToken cancellationToken = default);
 
     Task<PriceListItem?> GetTrackedAsync(
