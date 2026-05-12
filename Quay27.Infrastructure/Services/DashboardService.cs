@@ -102,22 +102,53 @@ public sealed class DashboardService : IDashboardService
         var range = DashboardDateRange.Resolve(preset, now);
         var (startUtc, endUtc) = DashboardDateRange.ToUtcHalfOpenInterval(range, now);
 
-        var lineRows = await (
-            from line in _db.CustomerInvoiceLines.AsNoTracking()
-            join c in _db.Customers.AsNoTracking() on line.CustomerId equals c.Id
-            where !c.IsDeleted
-                  && c.BillCreatedAt >= startUtc
-                  && c.BillCreatedAt < endUtc
-                  && c.BillCreatedAt > DateTime.MinValue
-                  && !IsCancelled(c.Notes)
-                  && !SalesDashboardConstants.IsSalesReturn(c.Status, c.Notes)
-            select new
-            {
-                line.ProductId,
-                line.ProductNameSnapshot,
-                line.Amount,
-                line.Quantity,
-            }).ToListAsync(cancellationToken);
+        // EF cannot translate DashboardService.IsCancelled / SalesDashboardConstants.IsSalesReturn — use translatable predicates.
+        var statusMarkersLower = SalesDashboardConstants.SalesReturnStatusContainsMarkers
+            .Where(m => !string.IsNullOrEmpty(m))
+            .Select(m => m.ToLowerInvariant())
+            .ToList();
+        var noteMarkersLower = SalesDashboardConstants.SalesReturnNotesContainsMarkers
+            .Where(m => !string.IsNullOrEmpty(m))
+            .Select(m => m.ToLowerInvariant())
+            .ToList();
+
+        // Avoid `localList.Any(m => column.ToLower().Contains(m))` when marker lists are empty: some providers
+        // (e.g. EF InMemory in tests) do not translate that shape; with no markers it matches IsSalesReturn anyway.
+        var lineRows = statusMarkersLower.Count == 0 && noteMarkersLower.Count == 0
+            ? await (
+                from line in _db.CustomerInvoiceLines.AsNoTracking()
+                join c in _db.Customers.AsNoTracking() on line.CustomerId equals c.Id
+                where !c.IsDeleted
+                      && c.BillCreatedAt >= startUtc
+                      && c.BillCreatedAt < endUtc
+                      && c.BillCreatedAt > DateTime.MinValue
+                      && c.Notes.Trim() != SchemaConstants.CancelledInvoiceNotes
+                select new
+                {
+                    line.ProductId,
+                    line.ProductNameSnapshot,
+                    line.Amount,
+                    line.Quantity,
+                }).ToListAsync(cancellationToken)
+            : await (
+                from line in _db.CustomerInvoiceLines.AsNoTracking()
+                join c in _db.Customers.AsNoTracking() on line.CustomerId equals c.Id
+                where !c.IsDeleted
+                      && c.BillCreatedAt >= startUtc
+                      && c.BillCreatedAt < endUtc
+                      && c.BillCreatedAt > DateTime.MinValue
+                      && c.Notes.Trim() != SchemaConstants.CancelledInvoiceNotes
+                      && (statusMarkersLower.Count == 0 ||
+                          !statusMarkersLower.Any(m => c.Status.ToLower().Contains(m)))
+                      && (noteMarkersLower.Count == 0 ||
+                          !noteMarkersLower.Any(m => c.Notes.ToLower().Contains(m)))
+                select new
+                {
+                    line.ProductId,
+                    line.ProductNameSnapshot,
+                    line.Amount,
+                    line.Quantity,
+                }).ToListAsync(cancellationToken);
 
         var list = lineRows
             .GroupBy(x => new { x.ProductId, x.ProductNameSnapshot })

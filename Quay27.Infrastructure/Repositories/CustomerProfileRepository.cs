@@ -262,4 +262,7 @@ public partial class CustomerProfileRepository : ICustomerProfileRepository
 
         return q;
     }
+
+    private static async Task<HashSet<Guid>> ToGuidHashSetAsync(IQueryable<Guid> query, CancellationToken ct) =>
+        new HashSet<Guid>(await query.ToListAsync(ct));
 }

@@ -135,11 +135,11 @@ public partial class CustomerProfileRepository
 
         return op switch
         {
-            ">" => await joined.Where(x => x.gross > threshold).Select(x => x.Id).ToHashSetAsync(ct),
-            "<" => await joined.Where(x => x.gross < threshold).Select(x => x.Id).ToHashSetAsync(ct),
-            ">=" => await joined.Where(x => x.gross >= threshold).Select(x => x.Id).ToHashSetAsync(ct),
-            "<=" => await joined.Where(x => x.gross <= threshold).Select(x => x.Id).ToHashSetAsync(ct),
-            "=" => await joined.Where(x => x.gross == threshold).Select(x => x.Id).ToHashSetAsync(ct),
+            ">" => await ToGuidHashSetAsync(joined.Where(x => x.gross > threshold).Select(x => x.Id), ct),
+            "<" => await ToGuidHashSetAsync(joined.Where(x => x.gross < threshold).Select(x => x.Id), ct),
+            ">=" => await ToGuidHashSetAsync(joined.Where(x => x.gross >= threshold).Select(x => x.Id), ct),
+            "<=" => await ToGuidHashSetAsync(joined.Where(x => x.gross <= threshold).Select(x => x.Id), ct),
+            "=" => await ToGuidHashSetAsync(joined.Where(x => x.gross == threshold).Select(x => x.Id), ct),
             _ => new HashSet<Guid>(),
         };
     }
@@ -173,11 +173,11 @@ public partial class CustomerProfileRepository
 
         return op switch
         {
-            ">" => await joined.Where(x => x.revenue > threshold).Select(x => x.Id).ToHashSetAsync(ct),
-            "<" => await joined.Where(x => x.revenue < threshold).Select(x => x.Id).ToHashSetAsync(ct),
-            ">=" => await joined.Where(x => x.revenue >= threshold).Select(x => x.Id).ToHashSetAsync(ct),
-            "<=" => await joined.Where(x => x.revenue <= threshold).Select(x => x.Id).ToHashSetAsync(ct),
-            "=" => await joined.Where(x => x.revenue == threshold).Select(x => x.Id).ToHashSetAsync(ct),
+            ">" => await ToGuidHashSetAsync(joined.Where(x => x.revenue > threshold).Select(x => x.Id), ct),
+            "<" => await ToGuidHashSetAsync(joined.Where(x => x.revenue < threshold).Select(x => x.Id), ct),
+            ">=" => await ToGuidHashSetAsync(joined.Where(x => x.revenue >= threshold).Select(x => x.Id), ct),
+            "<=" => await ToGuidHashSetAsync(joined.Where(x => x.revenue <= threshold).Select(x => x.Id), ct),
+            "=" => await ToGuidHashSetAsync(joined.Where(x => x.revenue == threshold).Select(x => x.Id), ct),
             _ => new HashSet<Guid>(),
         };
     }
@@ -200,11 +200,11 @@ public partial class CustomerProfileRepository
 
         return op switch
         {
-            ">" => await joined.Where(x => x.cnt > threshold).Select(x => x.Id).ToHashSetAsync(ct),
-            "<" => await joined.Where(x => x.cnt < threshold).Select(x => x.Id).ToHashSetAsync(ct),
-            ">=" => await joined.Where(x => x.cnt >= threshold).Select(x => x.Id).ToHashSetAsync(ct),
-            "<=" => await joined.Where(x => x.cnt <= threshold).Select(x => x.Id).ToHashSetAsync(ct),
-            "=" => await joined.Where(x => x.cnt == threshold).Select(x => x.Id).ToHashSetAsync(ct),
+            ">" => await ToGuidHashSetAsync(joined.Where(x => x.cnt > threshold).Select(x => x.Id), ct),
+            "<" => await ToGuidHashSetAsync(joined.Where(x => x.cnt < threshold).Select(x => x.Id), ct),
+            ">=" => await ToGuidHashSetAsync(joined.Where(x => x.cnt >= threshold).Select(x => x.Id), ct),
+            "<=" => await ToGuidHashSetAsync(joined.Where(x => x.cnt <= threshold).Select(x => x.Id), ct),
+            "=" => await ToGuidHashSetAsync(joined.Where(x => x.cnt == threshold).Select(x => x.Id), ct),
             _ => new HashSet<Guid>(),
         };
     }
@@ -228,11 +228,11 @@ public partial class CustomerProfileRepository
 
         return op switch
         {
-            ">" => await joined.Where(x => x.display > threshold).Select(x => x.Id).ToHashSetAsync(ct),
-            "<" => await joined.Where(x => x.display < threshold).Select(x => x.Id).ToHashSetAsync(ct),
-            ">=" => await joined.Where(x => x.display >= threshold).Select(x => x.Id).ToHashSetAsync(ct),
-            "<=" => await joined.Where(x => x.display <= threshold).Select(x => x.Id).ToHashSetAsync(ct),
-            "=" => await joined.Where(x => x.display == threshold).Select(x => x.Id).ToHashSetAsync(ct),
+            ">" => await ToGuidHashSetAsync(joined.Where(x => x.display > threshold).Select(x => x.Id), ct),
+            "<" => await ToGuidHashSetAsync(joined.Where(x => x.display < threshold).Select(x => x.Id), ct),
+            ">=" => await ToGuidHashSetAsync(joined.Where(x => x.display >= threshold).Select(x => x.Id), ct),
+            "<=" => await ToGuidHashSetAsync(joined.Where(x => x.display <= threshold).Select(x => x.Id), ct),
+            "=" => await ToGuidHashSetAsync(joined.Where(x => x.display == threshold).Select(x => x.Id), ct),
             _ => new HashSet<Guid>(),
         };
     }
@@ -244,11 +244,11 @@ public partial class CustomerProfileRepository
         var q = ActiveProfiles();
         return op switch
         {
-            ">" => await q.Where(p => p.RewardPointsBalance > threshold).Select(p => p.Id).ToHashSetAsync(ct),
-            "<" => await q.Where(p => p.RewardPointsBalance < threshold).Select(p => p.Id).ToHashSetAsync(ct),
-            ">=" => await q.Where(p => p.RewardPointsBalance >= threshold).Select(p => p.Id).ToHashSetAsync(ct),
-            "<=" => await q.Where(p => p.RewardPointsBalance <= threshold).Select(p => p.Id).ToHashSetAsync(ct),
-            "=" => await q.Where(p => p.RewardPointsBalance == threshold).Select(p => p.Id).ToHashSetAsync(ct),
+            ">" => await ToGuidHashSetAsync(q.Where(p => p.RewardPointsBalance > threshold).Select(p => p.Id), ct),
+            "<" => await ToGuidHashSetAsync(q.Where(p => p.RewardPointsBalance < threshold).Select(p => p.Id), ct),
+            ">=" => await ToGuidHashSetAsync(q.Where(p => p.RewardPointsBalance >= threshold).Select(p => p.Id), ct),
+            "<=" => await ToGuidHashSetAsync(q.Where(p => p.RewardPointsBalance <= threshold).Select(p => p.Id), ct),
+            "=" => await ToGuidHashSetAsync(q.Where(p => p.RewardPointsBalance == threshold).Select(p => p.Id), ct),
             _ => new HashSet<Guid>(),
         };
     }
@@ -260,11 +260,11 @@ public partial class CustomerProfileRepository
         var q = ActiveProfiles();
         return op switch
         {
-            ">" => await q.Where(p => p.RewardPointsLifetime > threshold).Select(p => p.Id).ToHashSetAsync(ct),
-            "<" => await q.Where(p => p.RewardPointsLifetime < threshold).Select(p => p.Id).ToHashSetAsync(ct),
-            ">=" => await q.Where(p => p.RewardPointsLifetime >= threshold).Select(p => p.Id).ToHashSetAsync(ct),
-            "<=" => await q.Where(p => p.RewardPointsLifetime <= threshold).Select(p => p.Id).ToHashSetAsync(ct),
-            "=" => await q.Where(p => p.RewardPointsLifetime == threshold).Select(p => p.Id).ToHashSetAsync(ct),
+            ">" => await ToGuidHashSetAsync(q.Where(p => p.RewardPointsLifetime > threshold).Select(p => p.Id), ct),
+            "<" => await ToGuidHashSetAsync(q.Where(p => p.RewardPointsLifetime < threshold).Select(p => p.Id), ct),
+            ">=" => await ToGuidHashSetAsync(q.Where(p => p.RewardPointsLifetime >= threshold).Select(p => p.Id), ct),
+            "<=" => await ToGuidHashSetAsync(q.Where(p => p.RewardPointsLifetime <= threshold).Select(p => p.Id), ct),
+            "=" => await ToGuidHashSetAsync(q.Where(p => p.RewardPointsLifetime == threshold).Select(p => p.Id), ct),
             _ => new HashSet<Guid>(),
         };
     }
@@ -291,12 +291,12 @@ public partial class CustomerProfileRepository
         var thr = thresholdUtc;
         return op switch
         {
-            ">" => await joined.Where(x => x.Last != null && x.Last > thr).Select(x => x.Id).ToHashSetAsync(ct),
-            "<" => await joined.Where(x => x.Last != null && x.Last < thr).Select(x => x.Id).ToHashSetAsync(ct),
-            ">=" => await joined.Where(x => x.Last != null && x.Last >= thr).Select(x => x.Id).ToHashSetAsync(ct),
-            "<=" => await joined.Where(x => x.Last != null && x.Last <= thr).Select(x => x.Id).ToHashSetAsync(ct),
-            "=" => await joined.Where(x => x.Last != null && x.Last >= thr && x.Last < thr.AddDays(1))
-                .Select(x => x.Id).ToHashSetAsync(ct),
+            ">" => await ToGuidHashSetAsync(joined.Where(x => x.Last != null && x.Last > thr).Select(x => x.Id), ct),
+            "<" => await ToGuidHashSetAsync(joined.Where(x => x.Last != null && x.Last < thr).Select(x => x.Id), ct),
+            ">=" => await ToGuidHashSetAsync(joined.Where(x => x.Last != null && x.Last >= thr).Select(x => x.Id), ct),
+            "<=" => await ToGuidHashSetAsync(joined.Where(x => x.Last != null && x.Last <= thr).Select(x => x.Id), ct),
+            "=" => await ToGuidHashSetAsync(joined.Where(x => x.Last != null && x.Last >= thr && x.Last < thr.AddDays(1))
+                .Select(x => x.Id), ct),
             _ => new HashSet<Guid>(),
         };
     }
@@ -306,10 +306,9 @@ public partial class CustomerProfileRepository
         if (!TryParseInt(val, out var month) || month is < 1 or > 12)
             return new HashSet<Guid>();
 
-        return await ActiveProfiles()
+        return await ToGuidHashSetAsync(ActiveProfiles()
             .Where(p => p.Birthday != null && p.Birthday.Value.Month == month)
-            .Select(p => p.Id)
-            .ToHashSetAsync(ct);
+            .Select(p => p.Id), ct);
     }
 
     private async Task<HashSet<Guid>> CompareAgeAsync(string op, string val, CancellationToken ct)
@@ -321,22 +320,22 @@ public partial class CustomerProfileRepository
 
         return op switch
         {
-            ">=" => await ActiveProfiles()
+            ">=" => await ToGuidHashSetAsync(ActiveProfiles()
                 .Where(p => p.Birthday != null && p.Birthday <= today.AddYears(-ageYears))
-                .Select(p => p.Id).ToHashSetAsync(ct),
-            ">" => await ActiveProfiles()
+                .Select(p => p.Id), ct),
+            ">" => await ToGuidHashSetAsync(ActiveProfiles()
                 .Where(p => p.Birthday != null && p.Birthday < today.AddYears(-ageYears))
-                .Select(p => p.Id).ToHashSetAsync(ct),
-            "<=" => await ActiveProfiles()
+                .Select(p => p.Id), ct),
+            "<=" => await ToGuidHashSetAsync(ActiveProfiles()
                 .Where(p => p.Birthday != null && p.Birthday >= today.AddYears(-ageYears))
-                .Select(p => p.Id).ToHashSetAsync(ct),
-            "<" => await ActiveProfiles()
+                .Select(p => p.Id), ct),
+            "<" => await ToGuidHashSetAsync(ActiveProfiles()
                 .Where(p => p.Birthday != null && p.Birthday > today.AddYears(-ageYears))
-                .Select(p => p.Id).ToHashSetAsync(ct),
-            "=" => await ActiveProfiles()
+                .Select(p => p.Id), ct),
+            "=" => await ToGuidHashSetAsync(ActiveProfiles()
                 .Where(p => p.Birthday != null && p.Birthday <= today.AddYears(-ageYears) &&
                             p.Birthday > today.AddYears(-ageYears - 1))
-                .Select(p => p.Id).ToHashSetAsync(ct),
+                .Select(p => p.Id), ct),
             _ => new HashSet<Guid>(),
         };
     }
@@ -346,7 +345,7 @@ public partial class CustomerProfileRepository
         var v = val.Trim();
         if (v.Length == 0)
             return new HashSet<Guid>();
-        return await ActiveProfiles().Where(p => p.Gender == v).Select(p => p.Id).ToHashSetAsync(ct);
+        return await ToGuidHashSetAsync(ActiveProfiles().Where(p => p.Gender == v).Select(p => p.Id), ct);
     }
 
     private async Task<HashSet<Guid>> CompareBuyerTypeAsync(string val, CancellationToken ct)
@@ -354,7 +353,7 @@ public partial class CustomerProfileRepository
         var v = val.Trim();
         if (v is not ("individual" or "company"))
             return new HashSet<Guid>();
-        return await ActiveProfiles().Where(p => p.BuyerType == v).Select(p => p.Id).ToHashSetAsync(ct);
+        return await ToGuidHashSetAsync(ActiveProfiles().Where(p => p.BuyerType == v).Select(p => p.Id), ct);
     }
 
     private async Task<HashSet<Guid>> CompareLocationAsync(string val, CancellationToken ct)
@@ -363,7 +362,7 @@ public partial class CustomerProfileRepository
         if (d.Length == 0)
             return new HashSet<Guid>();
 
-        return await ActiveProfiles()
+        return await ToGuidHashSetAsync(ActiveProfiles()
             .Where(p =>
                 p.Address.ToLower().Contains(d) ||
                 p.Ward.ToLower().Contains(d) ||
@@ -371,7 +370,6 @@ public partial class CustomerProfileRepository
                 p.InvoiceAddress.ToLower().Contains(d) ||
                 p.InvoiceWard.ToLower().Contains(d) ||
                 p.InvoiceProvinceCity.ToLower().Contains(d))
-            .Select(p => p.Id)
-            .ToHashSetAsync(ct);
+            .Select(p => p.Id), ct);
     }
 }
