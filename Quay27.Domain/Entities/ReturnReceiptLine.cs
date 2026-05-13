@@ -15,4 +15,5 @@ public class ReturnReceiptLine
     public decimal ReturnPrice { get; set; }
     public decimal Discount { get; set; }
     public decimal LineTotal { get; set; }
+    public string? Note { get; set; }
 }

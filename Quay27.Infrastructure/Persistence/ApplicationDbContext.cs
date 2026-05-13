@@ -365,6 +365,7 @@ public class ApplicationDbContext : DbContext
             e.Property(x => x.UnitPrice).HasColumnType("decimal(18,2)");
             e.Property(x => x.Discount).HasColumnType("decimal(18,2)");
             e.Property(x => x.LineTotal).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Note).HasMaxLength(500);
             e.HasOne(x => x.GoodsReceipt)
                 .WithMany(x => x.Lines)
                 .HasForeignKey(x => x.GoodsReceiptId)
@@ -410,6 +411,7 @@ public class ApplicationDbContext : DbContext
             e.Property(x => x.ReturnPrice).HasColumnType("decimal(18,2)");
             e.Property(x => x.Discount).HasColumnType("decimal(18,2)");
             e.Property(x => x.LineTotal).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Note).HasMaxLength(500);
             e.HasOne(x => x.ReturnReceipt)
                 .WithMany(x => x.Lines)
                 .HasForeignKey(x => x.ReturnReceiptId)

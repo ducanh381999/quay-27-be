@@ -176,18 +176,23 @@ public class ReturnReceiptService : IReturnReceiptService
             var lineTotal = Math.Max(0m, quantity * returnPrice - discount);
             subtotal += lineTotal;
 
+            var unitSnapshot = !string.IsNullOrWhiteSpace(line.Unit)
+                ? line.Unit.Trim()
+                : (product.Group?.Name ?? string.Empty);
+
             normalizedLines.Add(new ReturnReceiptLine
             {
                 Id = Guid.NewGuid(),
                 ProductId = product.Id,
                 ProductCodeSnapshot = product.Code,
                 ProductNameSnapshot = product.Name,
-                UnitSnapshot = product.Group?.Name ?? string.Empty,
+                UnitSnapshot = unitSnapshot,
                 Quantity = quantity,
                 ImportPrice = importPrice,
                 ReturnPrice = returnPrice,
                 Discount = discount,
                 LineTotal = lineTotal,
+                Note = NormalizeLineNote(line.Note),
             });
         }
 
@@ -275,13 +280,25 @@ public class ReturnReceiptService : IReturnReceiptService
                 x.ImportPrice,
                 x.ReturnPrice,
                 x.Discount,
-                x.LineTotal)).ToList(),
+                x.LineTotal,
+                x.Note)).ToList(),
             entity.PaymentAllocations.Select(x => new PaymentAllocationDto(
                 x.Id,
                 x.PaymentMethod,
                 x.Amount,
                 x.ReceivingAccountId,
                 x.ReceivingAccount?.Name)).ToList());
+    }
+
+    private static string? NormalizeLineNote(string? note)
+    {
+        if (string.IsNullOrWhiteSpace(note))
+        {
+            return null;
+        }
+
+        var t = note.Trim();
+        return t.Length <= 500 ? t : t[..500];
     }
 
     private void EnsureAuthenticated()

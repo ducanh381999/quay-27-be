@@ -14,4 +14,5 @@ public class GoodsReceiptLine
     public decimal UnitPrice { get; set; }
     public decimal Discount { get; set; }
     public decimal LineTotal { get; set; }
+    public string? Note { get; set; }
 }

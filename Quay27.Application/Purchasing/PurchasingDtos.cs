@@ -5,14 +5,17 @@ public sealed record ReceiptLineInput(
     decimal Quantity,
     decimal UnitPrice,
     decimal Discount,
-    string? Unit = null);
+    string? Unit = null,
+    string? Note = null);
 
 public sealed record ReturnReceiptLineInput(
     Guid ProductId,
     decimal Quantity,
     decimal ImportPrice,
     decimal ReturnPrice,
-    decimal Discount);
+    decimal Discount,
+    string? Unit = null,
+    string? Note = null);
 
 public sealed record PaymentAllocationInput(
     string PaymentMethod,
@@ -48,7 +51,8 @@ public sealed record ReceiptLineDto(
     decimal Quantity,
     decimal UnitPrice,
     decimal Discount,
-    decimal LineTotal);
+    decimal LineTotal,
+    string? Note);
 
 public sealed record ReturnReceiptLineDto(
     Guid Id,
@@ -60,7 +64,8 @@ public sealed record ReturnReceiptLineDto(
     decimal ImportPrice,
     decimal ReturnPrice,
     decimal Discount,
-    decimal LineTotal);
+    decimal LineTotal,
+    string? Note);
 
 public sealed record PaymentAllocationDto(
     Guid Id,

@@ -190,6 +190,7 @@ public class GoodsReceiptService : IGoodsReceiptService
                 UnitPrice = unitPrice,
                 Discount = discount,
                 LineTotal = lineTotal,
+                Note = NormalizeLineNote(line.Note),
             });
         }
 
@@ -277,13 +278,25 @@ public class GoodsReceiptService : IGoodsReceiptService
                 x.Quantity,
                 x.UnitPrice,
                 x.Discount,
-                x.LineTotal)).ToList(),
+                x.LineTotal,
+                x.Note)).ToList(),
             entity.PaymentAllocations.Select(x => new PaymentAllocationDto(
                 x.Id,
                 x.PaymentMethod,
                 x.Amount,
                 x.ReceivingAccountId,
                 x.ReceivingAccount?.Name)).ToList());
+    }
+
+    private static string? NormalizeLineNote(string? note)
+    {
+        if (string.IsNullOrWhiteSpace(note))
+        {
+            return null;
+        }
+
+        var t = note.Trim();
+        return t.Length <= 500 ? t : t[..500];
     }
 
     private void EnsureAuthenticated()
