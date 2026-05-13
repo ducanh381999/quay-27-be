@@ -35,6 +35,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<ReturnReceiptLine> ReturnReceiptLines => Set<ReturnReceiptLine>();
     public DbSet<SupplierPaymentAllocation> SupplierPaymentAllocations => Set<SupplierPaymentAllocation>();
     public DbSet<ReceivingAccount> ReceivingAccounts => Set<ReceivingAccount>();
+    public DbSet<BankCatalogItem> BankCatalogItems => Set<BankCatalogItem>();
+    public DbSet<EWalletCatalogItem> EWalletCatalogItems => Set<EWalletCatalogItem>();
     public DbSet<SaleChannel> SaleChannels => Set<SaleChannel>();
     public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
     public DbSet<PurchaseOrderItem> PurchaseOrderItems => Set<PurchaseOrderItem>();
@@ -326,9 +328,36 @@ public class ApplicationDbContext : DbContext
             e.Property(x => x.Name).HasMaxLength(256).IsRequired();
             e.Property(x => x.AccountNumber).HasMaxLength(64).IsRequired();
             e.Property(x => x.BankName).HasMaxLength(256);
+            e.Property(x => x.AccountKind).HasMaxLength(32).IsRequired();
+            e.Property(x => x.ProviderCode).HasMaxLength(128);
+            e.Property(x => x.Note).HasColumnType("longtext");
+            e.Property(x => x.ScopeKind).HasMaxLength(32).IsRequired();
             e.Property(x => x.CreatedBy).HasMaxLength(256).IsRequired();
             e.Property(x => x.UpdatedBy).HasMaxLength(256);
             e.HasIndex(x => new { x.Name, x.AccountNumber });
+            e.HasIndex(x => x.AccountKind);
+        });
+
+        modelBuilder.Entity<BankCatalogItem>(e =>
+        {
+            e.ToTable("BankCatalogItems");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(128).IsRequired();
+            e.Property(x => x.FullName).HasMaxLength(512).IsRequired();
+            e.Property(x => x.GlobalName).HasMaxLength(512);
+            e.Property(x => x.SearchText).HasMaxLength(1024).IsRequired();
+            e.HasIndex(x => x.Code).IsUnique();
+        });
+
+        modelBuilder.Entity<EWalletCatalogItem>(e =>
+        {
+            e.ToTable("EWalletCatalogItems");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(128).IsRequired();
+            e.Property(x => x.FullName).HasMaxLength(256).IsRequired();
+            e.Property(x => x.GlobalName).HasMaxLength(256);
+            e.Property(x => x.SearchText).HasMaxLength(512).IsRequired();
+            e.HasIndex(x => x.Code).IsUnique();
         });
 
         modelBuilder.Entity<GoodsReceipt>(e =>

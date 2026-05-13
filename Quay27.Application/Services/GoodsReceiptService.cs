@@ -15,6 +15,7 @@ public class GoodsReceiptService : IGoodsReceiptService
     private readonly IReceivingAccountRepository _receivingAccounts;
     private readonly ICurrentUser _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICashbookSyncService _cashbookSync;
     private readonly ILogger<GoodsReceiptService> _logger;
 
     public GoodsReceiptService(
@@ -24,6 +25,7 @@ public class GoodsReceiptService : IGoodsReceiptService
         IReceivingAccountRepository receivingAccounts,
         ICurrentUser currentUser,
         IUnitOfWork unitOfWork,
+        ICashbookSyncService cashbookSync,
         ILogger<GoodsReceiptService> logger)
     {
         _receipts = receipts;
@@ -32,6 +34,7 @@ public class GoodsReceiptService : IGoodsReceiptService
         _receivingAccounts = receivingAccounts;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _cashbookSync = cashbookSync;
         _logger = logger;
     }
 
@@ -103,6 +106,16 @@ public class GoodsReceiptService : IGoodsReceiptService
         return entity is null ? null : Map(entity);
     }
 
+    public async Task<IReadOnlyList<GoodsReceiptSupplierPaymentCashbookRowDto>?> ListSupplierPaymentCashbookEntriesAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        if (!await _receipts.ExistsAsync(id, cancellationToken))
+            return null;
+        return await _receipts.ListSupplierPaymentCashbookRowsAsync(id, cancellationToken);
+    }
+
     public Task<GoodsReceiptDto> CreateAsync(CreateGoodsReceiptRequest request, CancellationToken cancellationToken = default)
     {
         EnsureAuthenticated();
@@ -145,6 +158,10 @@ public class GoodsReceiptService : IGoodsReceiptService
     {
         if (request.Lines.Count == 0)
             throw new InvalidOperationException("Phiếu nhập phải có ít nhất 1 hàng hóa.");
+
+        var previousStatus = entity.Status?.Trim() ?? string.Empty;
+        var previousLineQuantities = entity.Lines.Select(l => (l.ProductId, l.Quantity)).ToList();
+        var previousPaymentAllocationIds = entity.PaymentAllocations.Select(a => a.Id).ToList();
 
         Supplier? oldSupplier = null;
         if (entity.SupplierId.HasValue)
@@ -202,6 +219,7 @@ public class GoodsReceiptService : IGoodsReceiptService
         var oldSubtotal = entity.Subtotal;
 
         entity.SupplierId = request.SupplierId;
+        entity.Supplier = newSupplier;
         entity.Status = string.IsNullOrWhiteSpace(request.Status) ? "received" : request.Status.Trim();
         entity.ReceiptDate = receiptDate;
         entity.Subtotal = subtotal;
@@ -233,6 +251,8 @@ public class GoodsReceiptService : IGoodsReceiptService
                 entity.PaymentAllocations.Add(new SupplierPaymentAllocation
                 {
                     Id = Guid.NewGuid(),
+                    GoodsReceiptId = entity.Id,
+                    ReturnReceiptId = null,
                     PaymentMethod = allocation.PaymentMethod,
                     Amount = Math.Max(0m, allocation.Amount),
                     ReceivingAccountId = allocation.ReceivingAccountId,
@@ -251,6 +271,10 @@ public class GoodsReceiptService : IGoodsReceiptService
             newSupplier.CurrentDebt += supplierDebtDelta;
             newSupplier.TotalPurchase += subtotal;
         }
+
+        await PurchasingReceiptStockHelper.ReconcileGoodsReceiptStockAsync(
+            _products, previousStatus, entity, previousLineQuantities, cancellationToken);
+        await _cashbookSync.SyncGoodsReceiptSupplierPaymentsAsync(entity, previousPaymentAllocationIds, cancellationToken);
     }
 
     private static GoodsReceiptDto Map(GoodsReceipt entity)
@@ -269,6 +293,7 @@ public class GoodsReceiptService : IGoodsReceiptService
             entity.PaidAmount,
             entity.SupplierDebtDelta,
             entity.Notes,
+            entity.CreatedBy,
             entity.Lines.Select(x => new ReceiptLineDto(
                 x.Id,
                 x.ProductId,

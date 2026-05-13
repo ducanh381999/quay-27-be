@@ -15,6 +15,7 @@ public class ReturnReceiptService : IReturnReceiptService
     private readonly IReceivingAccountRepository _receivingAccounts;
     private readonly ICurrentUser _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICashbookSyncService _cashbookSync;
     private readonly ILogger<ReturnReceiptService> _logger;
 
     public ReturnReceiptService(
@@ -24,6 +25,7 @@ public class ReturnReceiptService : IReturnReceiptService
         IReceivingAccountRepository receivingAccounts,
         ICurrentUser currentUser,
         IUnitOfWork unitOfWork,
+        ICashbookSyncService cashbookSync,
         ILogger<ReturnReceiptService> logger)
     {
         _receipts = receipts;
@@ -32,6 +34,7 @@ public class ReturnReceiptService : IReturnReceiptService
         _receivingAccounts = receivingAccounts;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _cashbookSync = cashbookSync;
         _logger = logger;
     }
 
@@ -103,6 +106,16 @@ public class ReturnReceiptService : IReturnReceiptService
         return entity is null ? null : Map(entity);
     }
 
+    public async Task<IReadOnlyList<ReturnReceiptSupplierRefundCashbookRowDto>?> ListSupplierRefundCashbookEntriesAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        if (!await _receipts.ExistsAsync(id, cancellationToken))
+            return null;
+        return await _receipts.ListSupplierRefundCashbookRowsAsync(id, cancellationToken);
+    }
+
     public Task<ReturnReceiptDto> CreateAsync(CreateReturnReceiptRequest request, CancellationToken cancellationToken = default)
     {
         EnsureAuthenticated();
@@ -145,6 +158,10 @@ public class ReturnReceiptService : IReturnReceiptService
     {
         if (request.Lines.Count == 0)
             throw new InvalidOperationException("Phiếu trả hàng phải có ít nhất 1 hàng hóa.");
+
+        var previousStatus = entity.Status?.Trim() ?? string.Empty;
+        var previousLineQuantities = entity.Lines.Select(l => (l.ProductId, l.Quantity)).ToList();
+        var previousPaymentAllocationIds = entity.PaymentAllocations.Select(a => a.Id).ToList();
 
         Supplier? oldSupplier = null;
         if (entity.SupplierId.HasValue)
@@ -204,6 +221,7 @@ public class ReturnReceiptService : IReturnReceiptService
         var oldSubtotal = entity.Subtotal;
 
         entity.SupplierId = request.SupplierId;
+        entity.Supplier = newSupplier;
         entity.Status = string.IsNullOrWhiteSpace(request.Status) ? "returned" : request.Status.Trim();
         entity.ReturnDate = returnDate;
         entity.Subtotal = subtotal;
@@ -235,6 +253,8 @@ public class ReturnReceiptService : IReturnReceiptService
                 entity.PaymentAllocations.Add(new SupplierPaymentAllocation
                 {
                     Id = Guid.NewGuid(),
+                    GoodsReceiptId = null,
+                    ReturnReceiptId = entity.Id,
                     PaymentMethod = allocation.PaymentMethod,
                     Amount = Math.Max(0m, allocation.Amount),
                     ReceivingAccountId = allocation.ReceivingAccountId,
@@ -252,6 +272,10 @@ public class ReturnReceiptService : IReturnReceiptService
             newSupplier.CurrentDebt = Math.Max(0m, newSupplier.CurrentDebt - supplierDebtDelta);
             newSupplier.TotalReturn += subtotal;
         }
+
+        await PurchasingReceiptStockHelper.ReconcileReturnReceiptStockAsync(
+            _products, previousStatus, entity, previousLineQuantities, cancellationToken);
+        await _cashbookSync.SyncReturnReceiptSupplierPaymentsAsync(entity, previousPaymentAllocationIds, cancellationToken);
     }
 
     private static ReturnReceiptDto Map(ReturnReceipt entity)
@@ -270,6 +294,7 @@ public class ReturnReceiptService : IReturnReceiptService
             entity.SupplierPaidAmount,
             entity.SupplierDebtDelta,
             entity.Notes,
+            entity.CreatedBy,
             entity.Lines.Select(x => new ReturnReceiptLineDto(
                 x.Id,
                 x.ProductId,

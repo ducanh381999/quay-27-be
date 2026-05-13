@@ -50,9 +50,9 @@ public class GoodsReceiptRepository : IGoodsReceiptRepository
                 (x.Supplier != null && (x.Supplier.Code.Contains(search) || x.Supplier.Name.Contains(search))));
         }
 
-        if (!string.IsNullOrWhiteSpace(query.Status))
+        if (query.Statuses is { Count: > 0 })
         {
-            q = q.Where(x => x.Status == query.Status);
+            q = q.Where(x => query.Statuses.Contains(x.Status));
         }
 
         if (query.From.HasValue) q = q.Where(x => x.ReceiptDate >= query.From.Value);
@@ -87,5 +87,32 @@ public class GoodsReceiptRepository : IGoodsReceiptRepository
         }
 
         return $"{prefix}{(number + 1).ToString().PadLeft(6, '0')}";
+    }
+
+    public Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default) =>
+        _db.GoodsReceipts.AsNoTracking().AnyAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
+
+    public async Task<IReadOnlyList<GoodsReceiptSupplierPaymentCashbookRowDto>> ListSupplierPaymentCashbookRowsAsync(
+        Guid goodsReceiptId,
+        CancellationToken cancellationToken = default)
+    {
+        const string supplierPaymentAllocationSourceKind = "SupplierPaymentAllocation";
+        return await (
+            from a in _db.SupplierPaymentAllocations.AsNoTracking()
+            where a.GoodsReceiptId == goodsReceiptId
+            join e in _db.CashbookEntries.AsNoTracking() on a.Id equals e.SourceId
+            where e.SourceKind == supplierPaymentAllocationSourceKind
+            orderby e.OccurredAtUtc descending
+            join u in _db.Users.AsNoTracking() on e.CreatedByUserId equals u.Id into ug
+            from u in ug.DefaultIfEmpty()
+            select new GoodsReceiptSupplierPaymentCashbookRowDto(
+                e.Id,
+                e.Code,
+                e.OccurredAtUtc,
+                u != null ? (string.IsNullOrWhiteSpace(u.FullName) ? u.Username : u.FullName) : null,
+                e.FundType,
+                e.Status,
+                e.Amount))
+            .ToListAsync(cancellationToken);
     }
 }

@@ -35,7 +35,9 @@ public class ReturnReceiptsController : ControllerBase
         [FromQuery] DateTime? to,
         CancellationToken cancellationToken = default)
     {
-        var items = await _service.ListAsync(new ReceiptListQuery(search, status, from, to), cancellationToken);
+        var items = await _service.ListAsync(
+            new ReceiptListQuery(search, OrderQuerySplit.SplitStrings(status), from, to),
+            cancellationToken);
         return Ok(items);
     }
 
@@ -51,6 +53,19 @@ public class ReturnReceiptsController : ControllerBase
         var fileName = Path.GetFileName(templatePath);
         var bytes = await System.IO.File.ReadAllBytesAsync(templatePath, cancellationToken);
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+    }
+
+    [HttpGet("{id:guid}/supplier-refund-cashbook-entries")]
+    [ProducesResponseType(typeof(IReadOnlyList<ReturnReceiptSupplierRefundCashbookRowDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<ReturnReceiptSupplierRefundCashbookRowDto>>> ListSupplierRefundCashbookEntries(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var items = await _service.ListSupplierRefundCashbookEntriesAsync(id, cancellationToken);
+        if (items is null)
+            return NotFound();
+        return Ok(items);
     }
 
     [HttpGet("{id:guid}")]

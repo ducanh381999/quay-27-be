@@ -9,4 +9,7 @@ public interface IGoodsReceiptService
     Task<GoodsReceiptDto> UpdateAsync(Guid id, CreateGoodsReceiptRequest request, CancellationToken cancellationToken = default);
     Task<GoodsReceiptDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<GoodsReceiptListItemDto>> ListAsync(ReceiptListQuery query, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<GoodsReceiptSupplierPaymentCashbookRowDto>?> ListSupplierPaymentCashbookEntriesAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
 }
