@@ -4,7 +4,8 @@ public sealed record ReceiptLineInput(
     Guid ProductId,
     decimal Quantity,
     decimal UnitPrice,
-    decimal Discount);
+    decimal Discount,
+    string? Unit = null);
 
 public sealed record ReturnReceiptLineInput(
     Guid ProductId,

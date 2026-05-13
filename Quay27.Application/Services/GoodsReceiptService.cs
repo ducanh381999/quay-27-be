@@ -175,13 +175,17 @@ public class GoodsReceiptService : IGoodsReceiptService
             var lineTotal = Math.Max(0m, quantity * unitPrice - discount);
             subtotal += lineTotal;
 
+            var unitSnapshot = !string.IsNullOrWhiteSpace(line.Unit)
+                ? line.Unit.Trim()
+                : (product.Group?.Name ?? string.Empty);
+
             normalizedLines.Add(new GoodsReceiptLine
             {
                 Id = Guid.NewGuid(),
                 ProductId = product.Id,
                 ProductCodeSnapshot = product.Code,
                 ProductNameSnapshot = product.Name,
-                UnitSnapshot = product.Group?.Name ?? string.Empty,
+                UnitSnapshot = unitSnapshot,
                 Quantity = quantity,
                 UnitPrice = unitPrice,
                 Discount = discount,
