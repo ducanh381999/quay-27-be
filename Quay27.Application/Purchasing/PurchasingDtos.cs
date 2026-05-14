@@ -179,4 +179,5 @@ public sealed record ReceivingAccountDto(
     string Name,
     string AccountNumber,
     string BankName,
-    bool IsActive);
+    bool IsActive,
+    string? ProviderCode);

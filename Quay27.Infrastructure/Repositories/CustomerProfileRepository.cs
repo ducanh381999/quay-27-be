@@ -187,6 +187,21 @@ public partial class CustomerProfileRepository : ICustomerProfileRepository
     public Task AddAsync(CustomerProfile profile, CancellationToken cancellationToken = default) =>
         _db.CustomerProfiles.AddAsync(profile, cancellationToken).AsTask();
 
+    public async Task<decimal> GetDisplayDebtAsync(Guid customerProfileId, CancellationToken cancellationToken = default)
+    {
+        var row = await _db.CustomerProfiles.AsNoTracking()
+            .Where(x => x.Id == customerProfileId && !x.IsDeleted)
+            .Select(x => new { x.ManualCurrentDebt })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (row is null)
+            return 0m;
+        if (row.ManualCurrentDebt.HasValue)
+            return row.ManualCurrentDebt.Value;
+        return await _db.SalesInvoices.AsNoTracking()
+            .Where(i => i.CustomerProfileId == customerProfileId && i.Status != "cancelled")
+            .SumAsync(i => (decimal?)(i.SubtotalAmount - i.DiscountAmount - i.PaidAmount), cancellationToken) ?? 0m;
+    }
+
     public async Task<IReadOnlyList<string>> ListDistinctCreatorsAsync(CancellationToken cancellationToken = default)
     {
         return await _db.CustomerProfiles.AsNoTracking()

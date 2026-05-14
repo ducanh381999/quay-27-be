@@ -224,4 +224,32 @@ public sealed class CashbookRepository : ICashbookRepository
             .ToListAsync(cancellationToken);
         _db.CashbookEntries.RemoveRange(rows);
     }
+
+    public Task<CashbookEntry?> GetEntryForReadAsync(Guid id, CancellationToken cancellationToken = default) =>
+        _db.CashbookEntries.AsNoTracking()
+            .Include(x => x.PaymentCategory)
+            .Include(x => x.CreatedByUser)
+            .Include(x => x.CollectorUser)
+            .Include(x => x.StaffUser)
+            .Include(x => x.CashbookParty)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+    public Task<CashbookEntry?> GetEntryTrackedAsync(Guid id, CancellationToken cancellationToken = default) =>
+        _db.CashbookEntries
+            .Include(x => x.PaymentCategory)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+    public Task<SupplierPaymentAllocation?> GetSupplierPaymentAllocationTrackedAsync(Guid allocationId,
+        CancellationToken cancellationToken = default) =>
+        _db.SupplierPaymentAllocations
+            .Include(a => a.GoodsReceipt)!.ThenInclude(gr => gr!.PaymentAllocations)
+            .Include(a => a.ReturnReceipt)!.ThenInclude(rr => rr!.PaymentAllocations)
+            .FirstOrDefaultAsync(a => a.Id == allocationId, cancellationToken);
+
+    public Task<SupplierPaymentAllocation?> GetSupplierPaymentAllocationForReadAsync(Guid allocationId,
+        CancellationToken cancellationToken = default) =>
+        _db.SupplierPaymentAllocations.AsNoTracking()
+            .Include(a => a.GoodsReceipt)!.ThenInclude(gr => gr!.PaymentAllocations)
+            .Include(a => a.ReturnReceipt)!.ThenInclude(rr => rr!.PaymentAllocations)
+            .FirstOrDefaultAsync(a => a.Id == allocationId, cancellationToken);
 }

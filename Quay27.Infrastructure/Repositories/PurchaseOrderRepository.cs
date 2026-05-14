@@ -78,6 +78,9 @@ public sealed class PurchaseOrderRepository : IPurchaseOrderRepository
     public Task<PurchaseOrder?> GetTrackedByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         _db.PurchaseOrders.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
+    public Task<PurchaseOrder?> GetByIdNoTrackingAsync(Guid id, CancellationToken cancellationToken = default) =>
+        _db.PurchaseOrders.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
     public async Task<string> GenerateNextCodeAsync(CancellationToken cancellationToken = default)
     {
         const string prefix = "DH";

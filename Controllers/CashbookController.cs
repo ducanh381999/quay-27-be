@@ -14,6 +14,28 @@ public sealed class CashbookController : ControllerBase
 
     public CashbookController(ICashbookService service) => _service = service;
 
+    [HttpGet("entries/{id:guid}")]
+    [ProducesResponseType(typeof(CashbookEntryDetailDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<CashbookEntryDetailDto>> GetEntry(Guid id, CancellationToken cancellationToken) =>
+        Ok(await _service.GetEntryDetailAsync(id, cancellationToken));
+
+    [HttpPatch("entries/{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> PatchEntry(Guid id, [FromBody] PatchCashbookEntryRequest request,
+        CancellationToken cancellationToken)
+    {
+        await _service.PatchEntryAsync(id, request, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("entries/{id:guid}/cancel")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> CancelEntry(Guid id, CancellationToken cancellationToken)
+    {
+        await _service.CancelEntryAsync(id, cancellationToken);
+        return NoContent();
+    }
+
     [HttpGet("entries")]
     [ProducesResponseType(typeof(IReadOnlyList<CashbookEntryListItemDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<CashbookEntryListItemDto>>> ListEntries(

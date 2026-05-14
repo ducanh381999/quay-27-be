@@ -17,7 +17,8 @@ public class ReceivingAccountService : IReceivingAccountService
     {
         var items = await _accounts.ListActiveAsync(cancellationToken);
         return items
-            .Select(x => new ReceivingAccountDto(x.Id, x.Name, x.AccountNumber, x.BankName, x.IsActive))
+            .Select(x => new ReceivingAccountDto(x.Id, x.Name, x.AccountNumber, x.BankName, x.IsActive,
+                x.ProviderCode))
             .ToList();
     }
 }

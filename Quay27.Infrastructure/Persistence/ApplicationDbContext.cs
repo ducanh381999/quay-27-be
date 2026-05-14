@@ -22,6 +22,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<DuplicateFlag> DuplicateFlags => Set<DuplicateFlag>();
     public DbSet<SheetPickerDraftStaffName> SheetPickerDraftStaffNames => Set<SheetPickerDraftStaffName>();
     public DbSet<CustomerProfile> CustomerProfiles => Set<CustomerProfile>();
+    public DbSet<CustomerDeliveryAddress> CustomerDeliveryAddresses => Set<CustomerDeliveryAddress>();
+    public DbSet<CustomerReceivableTransaction> CustomerReceivableTransactions => Set<CustomerReceivableTransaction>();
     public DbSet<CustomerGroup> CustomerGroups => Set<CustomerGroup>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<ProductGroup> ProductGroups => Set<ProductGroup>();
@@ -197,6 +199,48 @@ public class ApplicationDbContext : DbContext
             e.HasIndex(x => x.CustomerCode).IsUnique();
             e.HasIndex(x => x.CustomerName);
             e.HasIndex(x => x.CreatedDate);
+        });
+
+        modelBuilder.Entity<CustomerDeliveryAddress>(e =>
+        {
+            e.ToTable("CustomerDeliveryAddresses");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.AddressName).HasMaxLength(256).IsRequired();
+            e.Property(x => x.RecipientName).HasMaxLength(256).IsRequired();
+            e.Property(x => x.Phone).HasMaxLength(32);
+            e.Property(x => x.AddressLine).HasColumnType("longtext").IsRequired();
+            e.Property(x => x.ProvinceCity).HasMaxLength(128);
+            e.Property(x => x.Ward).HasMaxLength(128);
+            e.Property(x => x.CreatedBy).HasMaxLength(256).IsRequired();
+            e.Property(x => x.UpdatedBy).HasMaxLength(256);
+            e.HasIndex(x => new { x.CustomerProfileId, x.IsDeleted });
+            e.HasOne(x => x.CustomerProfile)
+                .WithMany()
+                .HasForeignKey(x => x.CustomerProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CustomerReceivableTransaction>(e =>
+        {
+            e.ToTable("CustomerReceivableTransactions");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Kind).HasMaxLength(32).IsRequired();
+            e.Property(x => x.Amount).HasPrecision(18, 4);
+            e.Property(x => x.BalanceAfter).HasPrecision(18, 4);
+            e.Property(x => x.PaymentMethod).HasMaxLength(64);
+            e.Property(x => x.CollectorOrPerformerName).HasMaxLength(256);
+            e.Property(x => x.Note).HasColumnType("longtext");
+            e.Property(x => x.Description).HasColumnType("longtext");
+            e.Property(x => x.CreatedBy).HasMaxLength(256).IsRequired();
+            e.HasIndex(x => new { x.CustomerProfileId, x.CreatedAtUtc });
+            e.HasOne(x => x.CustomerProfile)
+                .WithMany()
+                .HasForeignKey(x => x.CustomerProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.ReceivingAccount)
+                .WithMany()
+                .HasForeignKey(x => x.ReceivingAccountId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<CustomerGroup>(e =>

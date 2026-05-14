@@ -17,4 +17,10 @@ public interface ICashbookService
 
     Task<CashbookEntryCreatedDto> CreatePaymentAsync(CreateCashbookPaymentRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<CashbookEntryDetailDto> GetEntryDetailAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task PatchEntryAsync(Guid id, PatchCashbookEntryRequest request, CancellationToken cancellationToken = default);
+
+    Task CancelEntryAsync(Guid id, CancellationToken cancellationToken = default);
 }

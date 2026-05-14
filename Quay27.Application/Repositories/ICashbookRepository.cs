@@ -34,4 +34,14 @@ public interface ICashbookRepository
     Task<CashbookParty?> GetPartyByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<bool> ExistsEntryForSourceAsync(string sourceKind, Guid sourceId, CancellationToken cancellationToken = default);
     Task RemoveEntriesBySourceAsync(string sourceKind, Guid sourceId, CancellationToken cancellationToken = default);
+
+    Task<CashbookEntry?> GetEntryForReadAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<CashbookEntry?> GetEntryTrackedAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<SupplierPaymentAllocation?> GetSupplierPaymentAllocationTrackedAsync(Guid allocationId,
+        CancellationToken cancellationToken = default);
+
+    Task<SupplierPaymentAllocation?> GetSupplierPaymentAllocationForReadAsync(Guid allocationId,
+        CancellationToken cancellationToken = default);
 }

@@ -64,6 +64,9 @@ public sealed class SalesReturnRepository : ISalesReturnRepository
     public Task<SalesReturn?> GetTrackedByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         _db.SalesReturns.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
+    public Task<SalesReturn?> GetByIdNoTrackingAsync(Guid id, CancellationToken cancellationToken = default) =>
+        _db.SalesReturns.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
     public async Task<string> GenerateNextCodeAsync(CancellationToken cancellationToken = default)
     {
         const string prefix = "TH";

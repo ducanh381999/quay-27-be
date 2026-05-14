@@ -87,6 +87,9 @@ public sealed class SalesInvoiceRepository : ISalesInvoiceRepository
     public Task<SalesInvoice?> GetTrackedByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         _db.SalesInvoices.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
+    public Task<SalesInvoice?> GetByIdNoTrackingAsync(Guid id, CancellationToken cancellationToken = default) =>
+        _db.SalesInvoices.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
     public async Task<string> GenerateNextCodeAsync(CancellationToken cancellationToken = default)
     {
         const string prefix = "HD";

@@ -9,35 +9,51 @@ using Quay27.Domain.Entities;
 
 namespace Quay27.Application.Services;
 
-public sealed class CashbookService : ICashbookService
+public sealed partial class CashbookService : ICashbookService
 {
+    private const string SkManual = "Manual";
+    private const string SkSalesInvoice = "SalesInvoice";
+    private const string SkSupplierPaymentAllocation = "SupplierPaymentAllocation";
+
     private readonly ICashbookRepository _cashbook;
     private readonly IPaymentCategoryRepository _categories;
     private readonly IUserRepository _users;
+    private readonly ISalesInvoiceRepository _salesInvoices;
+    private readonly ISalesReturnRepository _salesReturns;
+    private readonly IPurchaseOrderRepository _purchaseOrders;
     private readonly ICurrentUser _currentUser;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IValidator<CreateCashbookReceiptRequest> _receiptValidator;
     private readonly IValidator<CreateCashbookPaymentRequest> _paymentValidator;
     private readonly IValidator<CreateCashbookPartyRequest> _partyValidator;
+    private readonly IValidator<PatchCashbookEntryRequest> _patchValidator;
 
     public CashbookService(
         ICashbookRepository cashbook,
         IPaymentCategoryRepository categories,
         IUserRepository users,
+        ISalesInvoiceRepository salesInvoices,
+        ISalesReturnRepository salesReturns,
+        IPurchaseOrderRepository purchaseOrders,
         ICurrentUser currentUser,
         IUnitOfWork unitOfWork,
         IValidator<CreateCashbookReceiptRequest> receiptValidator,
         IValidator<CreateCashbookPaymentRequest> paymentValidator,
-        IValidator<CreateCashbookPartyRequest> partyValidator)
+        IValidator<CreateCashbookPartyRequest> partyValidator,
+        IValidator<PatchCashbookEntryRequest> patchValidator)
     {
         _cashbook = cashbook;
         _categories = categories;
         _users = users;
+        _salesInvoices = salesInvoices;
+        _salesReturns = salesReturns;
+        _purchaseOrders = purchaseOrders;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
         _receiptValidator = receiptValidator;
         _paymentValidator = paymentValidator;
         _partyValidator = partyValidator;
+        _patchValidator = patchValidator;
     }
 
     public Task<IReadOnlyList<CashbookEntryListItemDto>> ListEntriesAsync(CashbookListQuery query,

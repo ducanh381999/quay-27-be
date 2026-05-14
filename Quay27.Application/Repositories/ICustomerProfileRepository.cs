@@ -40,4 +40,7 @@ public interface ICustomerProfileRepository
         string groupName,
         IReadOnlyCollection<Guid> profileIds,
         CancellationToken cancellationToken = default);
+
+    /// <summary>CRM display debt: manual override if set, else unpaid invoice total for profile.</summary>
+    Task<decimal> GetDisplayDebtAsync(Guid customerProfileId, CancellationToken cancellationToken = default);
 }
