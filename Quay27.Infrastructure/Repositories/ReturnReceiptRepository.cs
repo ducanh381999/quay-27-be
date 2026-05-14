@@ -57,6 +57,8 @@ public class ReturnReceiptRepository : IReturnReceiptRepository
 
         if (query.From.HasValue) q = q.Where(x => x.ReturnDate >= query.From.Value);
         if (query.To.HasValue) q = q.Where(x => x.ReturnDate <= query.To.Value);
+        if (query.SupplierId.HasValue) q = q.Where(x => x.SupplierId == query.SupplierId.Value);
+        if (query.OutstandingDebtOnly) q = q.Where(x => x.SupplierDebtDelta > 0.0001m);
 
         return await q
             .OrderByDescending(x => x.ReturnDate)

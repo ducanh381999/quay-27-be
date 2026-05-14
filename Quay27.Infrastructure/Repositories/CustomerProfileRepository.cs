@@ -144,7 +144,7 @@ public partial class CustomerProfileRepository : ICustomerProfileRepository
     public async Task<IReadOnlyList<CustomerProfile>> ListAsync(string? search = null,
         CancellationToken cancellationToken = default)
     {
-        var query = _db.CustomerProfiles.AsNoTracking().Where(x => !x.IsDeleted);
+        var query = _db.CustomerProfiles.AsNoTracking().Where(x => !x.IsDeleted && x.IsActive);
         if (!string.IsNullOrWhiteSpace(search))
         {
             var t = search.Trim();
@@ -172,7 +172,7 @@ public partial class CustomerProfileRepository : ICustomerProfileRepository
         if (p.Length == 0)
             return Task.FromResult(false);
         return _db.CustomerProfiles.AsNoTracking()
-            .AnyAsync(x => !x.IsDeleted && x.Phone1 == p, cancellationToken);
+            .AnyAsync(x => !x.IsDeleted && x.IsActive && x.Phone1 == p, cancellationToken);
     }
 
     public Task<bool> ExistsActiveByEmailAsync(string email, CancellationToken cancellationToken = default)
@@ -181,7 +181,7 @@ public partial class CustomerProfileRepository : ICustomerProfileRepository
         if (e.Length == 0)
             return Task.FromResult(false);
         return _db.CustomerProfiles.AsNoTracking()
-            .AnyAsync(x => !x.IsDeleted && x.Email == e, cancellationToken);
+            .AnyAsync(x => !x.IsDeleted && x.IsActive && x.Email == e, cancellationToken);
     }
 
     public Task AddAsync(CustomerProfile profile, CancellationToken cancellationToken = default) =>
@@ -204,9 +204,9 @@ public partial class CustomerProfileRepository : ICustomerProfileRepository
 
         var status = (query.Status ?? "active").Trim().ToLowerInvariant();
         if (status == "active")
-            q = q.Where(x => !x.IsDeleted);
+            q = q.Where(x => !x.IsDeleted && x.IsActive);
         else if (status == "inactive")
-            q = q.Where(x => x.IsDeleted);
+            q = q.Where(x => x.IsDeleted || (!x.IsDeleted && !x.IsActive));
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {

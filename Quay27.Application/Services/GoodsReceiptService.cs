@@ -197,7 +197,7 @@ public class GoodsReceiptService : IGoodsReceiptService
         var discountTotal = Math.Max(0m, request.Discount);
         var total = Math.Max(0m, subtotal - discountTotal);
         var paidAmount = Math.Max(0m, request.PaidAmount);
-        var supplierDebtDelta = Math.Max(0m, total - paidAmount);
+        var supplierDebtDelta = Math.Max(0m, total - paidAmount - entity.SupplierPayableDiscountPortion);
         var oldDebtDelta = entity.SupplierDebtDelta;
         var oldSubtotal = entity.Subtotal;
 

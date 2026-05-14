@@ -45,6 +45,7 @@ public class CustomerProfileRepositoryListPagedTests
         CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
         CreatedBy = "test",
         IsDeleted = false,
+        IsActive = true,
     };
 
     [Fact]

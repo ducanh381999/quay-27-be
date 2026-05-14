@@ -43,5 +43,9 @@ public class CustomerProfile
     public string CreatedBy { get; set; } = string.Empty;
     public DateTime? UpdatedDate { get; set; }
     public string? UpdatedBy { get; set; }
+
+    /// <summary>Business active flag (Ngừng hoạt động). Distinct from <see cref="IsDeleted"/> (Xóa mềm).</summary>
+    public bool IsActive { get; set; } = true;
+
     public bool IsDeleted { get; set; }
 }

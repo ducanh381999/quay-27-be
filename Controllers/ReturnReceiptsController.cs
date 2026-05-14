@@ -33,9 +33,13 @@ public class ReturnReceiptsController : ControllerBase
         [FromQuery] string? status,
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to,
+        [FromQuery] Guid? supplierId,
+        [FromQuery] bool outstandingDebtOnly = false,
         CancellationToken cancellationToken = default)
     {
-        var items = await _service.ListAsync(new ReceiptListQuery(search, status, from, to), cancellationToken);
+        var items = await _service.ListAsync(
+            new ReceiptListQuery(search, status, from, to, supplierId, outstandingDebtOnly),
+            cancellationToken);
         return Ok(items);
     }
 

@@ -32,6 +32,9 @@ public sealed class CustomerProfileDto
     /// <summary>Override for displayed CRM debt; null means use invoice aggregate.</summary>
     public decimal? ManualCurrentDebt { get; init; }
 
+    /// <summary>CRM operational flag; distinct from soft-delete.</summary>
+    public bool IsActive { get; init; }
+
     public DateTime CreatedDate { get; init; }
     public string CreatedBy { get; init; } = string.Empty;
     public DateTime? UpdatedDate { get; init; }
@@ -98,4 +101,7 @@ public sealed class PatchCustomerProfileRequest
 
     /// <summary>When true, clears the manual debt override.</summary>
     public bool? ClearManualCurrentDebt { get; set; }
+
+    /// <summary>When set, updates CRM operational active flag (ignored when profile is soft-deleted).</summary>
+    public bool? IsActive { get; set; }
 }

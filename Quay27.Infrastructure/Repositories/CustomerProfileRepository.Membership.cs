@@ -114,7 +114,7 @@ public partial class CustomerProfileRepository
             System.Globalization.CultureInfo.InvariantCulture, out n);
 
     private IQueryable<CustomerProfile> ActiveProfiles() =>
-        _db.CustomerProfiles.AsNoTracking().Where(p => !p.IsDeleted);
+        _db.CustomerProfiles.AsNoTracking().Where(p => !p.IsDeleted && p.IsActive);
 
     private async Task<HashSet<Guid>> CompareInvoicedNetAsync(string op, string val, CancellationToken ct)
     {

@@ -22,7 +22,7 @@ public static class DependencyInjection
         services.AddScoped<IQueueService, QueueService>();
         services.AddScoped<IUserAdminService, UserAdminService>();
         services.AddScoped<ICustomerColumnPermissionService, CustomerColumnPermissionService>();
-        services.AddScoped<ISupplierService, SupplierService>();
+        services.AddScoped<ISupplierPayableService, SupplierPayableService>();
         services.AddScoped<ISupplierGroupService, SupplierGroupService>();
         services.AddScoped<IGoodsReceiptService, GoodsReceiptService>();
         services.AddScoped<IReturnReceiptService, ReturnReceiptService>();

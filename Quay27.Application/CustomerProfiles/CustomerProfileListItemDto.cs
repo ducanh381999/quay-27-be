@@ -38,6 +38,8 @@ public sealed class CustomerProfileListItemDto
 
     public bool IsActive { get; init; }
 
+    public bool IsDeleted { get; init; }
+
     /// <summary>Sum of PaidAmount on non-cancelled sales invoices linked to this profile.</summary>
     public decimal TotalSales { get; init; }
 

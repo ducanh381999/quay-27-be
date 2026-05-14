@@ -132,7 +132,9 @@ public sealed record ReceiptListQuery(
     string? Search,
     string? Status,
     DateTime? From,
-    DateTime? To);
+    DateTime? To,
+    Guid? SupplierId = null,
+    bool OutstandingDebtOnly = false);
 
 public sealed record ReceiptImportPreviewItem(
     int RowNumber,

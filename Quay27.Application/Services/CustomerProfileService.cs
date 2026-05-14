@@ -209,6 +209,7 @@ public class CustomerProfileService : ICustomerProfileService
             CreatedDate = now,
             CreatedBy = username,
             IsDeleted = false,
+            IsActive = true,
             ManualCurrentDebt = manualCurrentDebtOverride,
         };
 
@@ -255,6 +256,9 @@ public class CustomerProfileService : ICustomerProfileService
         else if (request.ManualCurrentDebt.HasValue)
             item.ManualCurrentDebt = request.ManualCurrentDebt;
 
+        if (request.IsActive is { } activeFlag && !item.IsDeleted)
+            item.IsActive = activeFlag;
+
         item.UpdatedBy = _currentUser.Username;
         item.UpdatedDate = DateTime.UtcNow;
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -268,6 +272,7 @@ public class CustomerProfileService : ICustomerProfileService
         if (item is null)
             return;
         item.IsDeleted = true;
+        item.IsActive = false;
         item.UpdatedBy = _currentUser.Username;
         item.UpdatedDate = DateTime.UtcNow;
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -326,7 +331,8 @@ public class CustomerProfileService : ICustomerProfileService
             CreatedBy = x.CreatedBy,
             UpdatedDate = x.UpdatedDate,
             UpdatedBy = x.UpdatedBy,
-            IsActive = !x.IsDeleted,
+            IsActive = !x.IsDeleted && x.IsActive,
+            IsDeleted = x.IsDeleted,
             TotalSales = totalSales,
             TotalSalesNet = totalSalesNet,
             CurrentDebt = x.ManualCurrentDebt ?? computedInvoiceDebt,
@@ -362,6 +368,7 @@ public class CustomerProfileService : ICustomerProfileService
             BankName = x.BankName,
             BankAccountNumber = x.BankAccountNumber,
             ManualCurrentDebt = x.ManualCurrentDebt,
+            IsActive = x.IsActive,
             CreatedDate = x.CreatedDate,
             CreatedBy = x.CreatedBy,
             UpdatedDate = x.UpdatedDate,

@@ -34,6 +34,11 @@ public class ApplicationDbContext : DbContext
     public DbSet<ReturnReceipt> ReturnReceipts => Set<ReturnReceipt>();
     public DbSet<ReturnReceiptLine> ReturnReceiptLines => Set<ReturnReceiptLine>();
     public DbSet<SupplierPaymentAllocation> SupplierPaymentAllocations => Set<SupplierPaymentAllocation>();
+    public DbSet<SupplierDebtAdjustment> SupplierDebtAdjustments => Set<SupplierDebtAdjustment>();
+    public DbSet<SupplierPayablePayment> SupplierPayablePayments => Set<SupplierPayablePayment>();
+    public DbSet<SupplierPayablePaymentLine> SupplierPayablePaymentLines => Set<SupplierPayablePaymentLine>();
+    public DbSet<SupplierPayableDiscount> SupplierPayableDiscounts => Set<SupplierPayableDiscount>();
+    public DbSet<SupplierPayableDiscountLine> SupplierPayableDiscountLines => Set<SupplierPayableDiscountLine>();
     public DbSet<ReceivingAccount> ReceivingAccounts => Set<ReceivingAccount>();
     public DbSet<SaleChannel> SaleChannels => Set<SaleChannel>();
     public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
@@ -184,6 +189,7 @@ public class ApplicationDbContext : DbContext
             e.Property(x => x.ManualCurrentDebt).HasPrecision(18, 4);
             e.Property(x => x.RewardPointsBalance).HasPrecision(18, 4).HasDefaultValue(0m);
             e.Property(x => x.RewardPointsLifetime).HasPrecision(18, 4).HasDefaultValue(0m);
+            e.Property(x => x.IsActive).HasDefaultValue(true);
             e.Property(x => x.CreatedBy).HasMaxLength(256).IsRequired();
             e.Property(x => x.UpdatedBy).HasMaxLength(256);
             e.HasIndex(x => x.CustomerCode).IsUnique();
@@ -341,6 +347,7 @@ public class ApplicationDbContext : DbContext
             e.Property(x => x.Discount).HasColumnType("decimal(18,2)");
             e.Property(x => x.Total).HasColumnType("decimal(18,2)");
             e.Property(x => x.PaidAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.SupplierPayableDiscountPortion).HasColumnType("decimal(18,2)");
             e.Property(x => x.SupplierDebtDelta).HasColumnType("decimal(18,2)");
             e.Property(x => x.Notes).HasColumnType("longtext");
             e.Property(x => x.CreatedBy).HasMaxLength(256).IsRequired();
@@ -439,6 +446,99 @@ public class ApplicationDbContext : DbContext
             e.HasOne(x => x.ReceivingAccount)
                 .WithMany()
                 .HasForeignKey(x => x.ReceivingAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SupplierDebtAdjustment>(e =>
+        {
+            e.ToTable("SupplierDebtAdjustments");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(32).IsRequired();
+            e.Property(x => x.Delta).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Description).HasColumnType("longtext");
+            e.Property(x => x.CreatedBy).HasMaxLength(256).IsRequired();
+            e.HasIndex(x => x.Code).IsUnique();
+            e.HasIndex(x => new { x.SupplierId, x.OccurredAtUtc });
+            e.HasOne(x => x.Supplier)
+                .WithMany()
+                .HasForeignKey(x => x.SupplierId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SupplierPayablePayment>(e =>
+        {
+            e.ToTable("SupplierPayablePayments");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(32).IsRequired();
+            e.Property(x => x.PaymentMethod).HasMaxLength(32).IsRequired();
+            e.Property(x => x.TotalAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Note).HasColumnType("longtext");
+            e.HasIndex(x => x.Code).IsUnique();
+            e.HasIndex(x => new { x.SupplierId, x.OccurredAtUtc });
+            e.HasOne(x => x.Supplier)
+                .WithMany()
+                .HasForeignKey(x => x.SupplierId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.PayerUser)
+                .WithMany()
+                .HasForeignKey(x => x.PayerUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.ReceivingAccount)
+                .WithMany()
+                .HasForeignKey(x => x.ReceivingAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.CashbookEntry)
+                .WithMany()
+                .HasForeignKey(x => x.CashbookEntryId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<SupplierPayablePaymentLine>(e =>
+        {
+            e.ToTable("SupplierPayablePaymentLines");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Amount).HasColumnType("decimal(18,2)");
+            e.HasOne(x => x.Payment)
+                .WithMany(x => x.Lines)
+                .HasForeignKey(x => x.PaymentId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.GoodsReceipt)
+                .WithMany()
+                .HasForeignKey(x => x.GoodsReceiptId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SupplierPayableDiscount>(e =>
+        {
+            e.ToTable("SupplierPayableDiscounts");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(32).IsRequired();
+            e.Property(x => x.TotalAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Note).HasColumnType("longtext");
+            e.HasIndex(x => x.Code).IsUnique();
+            e.HasIndex(x => new { x.SupplierId, x.OccurredAtUtc });
+            e.HasOne(x => x.Supplier)
+                .WithMany()
+                .HasForeignKey(x => x.SupplierId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.PerformerUser)
+                .WithMany()
+                .HasForeignKey(x => x.PerformerUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SupplierPayableDiscountLine>(e =>
+        {
+            e.ToTable("SupplierPayableDiscountLines");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Amount).HasColumnType("decimal(18,2)");
+            e.HasOne(x => x.Discount)
+                .WithMany(x => x.Lines)
+                .HasForeignKey(x => x.DiscountId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.GoodsReceipt)
+                .WithMany()
+                .HasForeignKey(x => x.GoodsReceiptId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 

@@ -12,6 +12,10 @@ public class GoodsReceipt
     public decimal Discount { get; set; }
     public decimal Total { get; set; }
     public decimal PaidAmount { get; set; }
+
+    /// <summary>Chiết khấu thanh toán đã phân bổ vào phiếu (giảm nợ phải trả theo phiếu).</summary>
+    public decimal SupplierPayableDiscountPortion { get; set; }
+
     public decimal SupplierDebtDelta { get; set; }
     public string Notes { get; set; } = string.Empty;
     public DateTime CreatedDate { get; set; }

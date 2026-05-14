@@ -13,7 +13,9 @@ public sealed class CustomerProfileListQuery
     /// <summary>Page size. Clamped server-side (1..200).</summary>
     public int Take { get; set; } = 50;
 
-    /// <summary>active = not soft-deleted; inactive = soft-deleted only; all = both.</summary>
+    /// <summary>
+    /// active = not soft-deleted and IsActive; inactive = soft-deleted or not IsActive; all = no filter on these flags.
+    /// </summary>
     public string? Status { get; set; }
 
     /// <summary>Repeat query param: customerGroup=A&amp;customerGroup=B — OR match on CustomerProfile.CustomerGroup (exact name).</summary>

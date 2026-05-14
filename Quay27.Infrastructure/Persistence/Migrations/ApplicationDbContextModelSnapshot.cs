@@ -565,6 +565,11 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasDefaultValue(true)
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<decimal?>("ManualCurrentDebt")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
@@ -743,6 +748,9 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<decimal>("PaidAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("SupplierPayableDiscountPortion")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("ReceiptDate")
@@ -2063,6 +2071,186 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.ToTable("SupplierPaymentAllocations", (string)null);
                 });
 
+            modelBuilder.Entity("Quay27.Domain.Entities.SupplierDebtAdjustment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<decimal>("Delta")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("SupplierId", "OccurredAtUtc");
+
+                    b.ToTable("SupplierDebtAdjustments", (string)null);
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SupplierPayableDiscount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<bool>("AllocateToDocuments")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("PerformerUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("SupplierId", "OccurredAtUtc");
+
+                    b.ToTable("SupplierPayableDiscounts", (string)null);
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SupplierPayableDiscountLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("DiscountId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("GoodsReceiptId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DiscountId");
+
+                    b.ToTable("SupplierPayableDiscountLines", (string)null);
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SupplierPayablePayment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<bool>("AllocateToDocuments")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<Guid?>("CashbookEntryId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("PayerUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<bool>("PostToCashbook")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<Guid?>("ReceivingAccountId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CashbookEntryId");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("SupplierId", "OccurredAtUtc");
+
+                    b.ToTable("SupplierPayablePayments", (string)null);
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SupplierPayablePaymentLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("GoodsReceiptId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("PaymentId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentId");
+
+                    b.ToTable("SupplierPayablePaymentLines", (string)null);
+                });
+
             modelBuilder.Entity("Quay27.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2553,6 +2741,106 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.Navigation("ReturnReceipt");
                 });
 
+            modelBuilder.Entity("Quay27.Domain.Entities.SupplierDebtAdjustment", b =>
+                {
+                    b.HasOne("Quay27.Domain.Entities.Supplier", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Supplier");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SupplierPayableDiscount", b =>
+                {
+                    b.HasOne("Quay27.Domain.Entities.User", "PerformerUser")
+                        .WithMany()
+                        .HasForeignKey("PerformerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Quay27.Domain.Entities.Supplier", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PerformerUser");
+
+                    b.Navigation("Supplier");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SupplierPayableDiscountLine", b =>
+                {
+                    b.HasOne("Quay27.Domain.Entities.SupplierPayableDiscount", "Discount")
+                        .WithMany("Lines")
+                        .HasForeignKey("DiscountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Quay27.Domain.Entities.GoodsReceipt", "GoodsReceipt")
+                        .WithMany()
+                        .HasForeignKey("GoodsReceiptId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Discount");
+
+                    b.Navigation("GoodsReceipt");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SupplierPayablePayment", b =>
+                {
+                    b.HasOne("Quay27.Domain.Entities.CashbookEntry", "CashbookEntry")
+                        .WithMany()
+                        .HasForeignKey("CashbookEntryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Quay27.Domain.Entities.User", "PayerUser")
+                        .WithMany()
+                        .HasForeignKey("PayerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Quay27.Domain.Entities.ReceivingAccount", "ReceivingAccount")
+                        .WithMany()
+                        .HasForeignKey("ReceivingAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Quay27.Domain.Entities.Supplier", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CashbookEntry");
+
+                    b.Navigation("PayerUser");
+
+                    b.Navigation("ReceivingAccount");
+
+                    b.Navigation("Supplier");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SupplierPayablePaymentLine", b =>
+                {
+                    b.HasOne("Quay27.Domain.Entities.GoodsReceipt", "GoodsReceipt")
+                        .WithMany()
+                        .HasForeignKey("GoodsReceiptId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Quay27.Domain.Entities.SupplierPayablePayment", "Payment")
+                        .WithMany("Lines")
+                        .HasForeignKey("PaymentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("GoodsReceipt");
+
+                    b.Navigation("Payment");
+                });
+
             modelBuilder.Entity("Quay27.Domain.Entities.UserRole", b =>
                 {
                     b.HasOne("Quay27.Domain.Entities.Role", "Role")
@@ -2634,6 +2922,16 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.Navigation("ExchangeItems");
 
                     b.Navigation("ReturnItems");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SupplierPayableDiscount", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("Quay27.Domain.Entities.SupplierPayablePayment", b =>
+                {
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("Quay27.Domain.Entities.SupplierGroup", b =>
