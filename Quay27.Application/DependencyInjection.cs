@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<IGoodsReceiptService, GoodsReceiptService>();
         services.AddScoped<IReturnReceiptService, ReturnReceiptService>();
         services.AddScoped<IReceivingAccountService, ReceivingAccountService>();
+        services.AddScoped<ITreasurySettingsService, TreasurySettingsService>();
         services.AddScoped<ISaleChannelService, SaleChannelService>();
         services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
         services.AddScoped<ISalesInvoiceService, SalesInvoiceService>();

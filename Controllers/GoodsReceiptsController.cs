@@ -38,7 +38,13 @@ public class GoodsReceiptsController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         var items = await _service.ListAsync(
-            new ReceiptListQuery(search, status, from, to, supplierId, outstandingDebtOnly),
+            new ReceiptListQuery(
+                search,
+                OrderQuerySplit.SplitStrings(status),
+                from,
+                to,
+                supplierId,
+                outstandingDebtOnly),
             cancellationToken);
         return Ok(items);
     }
@@ -55,6 +61,19 @@ public class GoodsReceiptsController : ControllerBase
         var fileName = Path.GetFileName(templatePath);
         var bytes = await System.IO.File.ReadAllBytesAsync(templatePath, cancellationToken);
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+    }
+
+    [HttpGet("{id:guid}/supplier-payment-cashbook-entries")]
+    [ProducesResponseType(typeof(IReadOnlyList<GoodsReceiptSupplierPaymentCashbookRowDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<GoodsReceiptSupplierPaymentCashbookRowDto>>> ListSupplierPaymentCashbookEntries(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var items = await _service.ListSupplierPaymentCashbookEntriesAsync(id, cancellationToken);
+        if (items is null)
+            return NotFound();
+        return Ok(items);
     }
 
     [HttpGet("{id:guid}")]

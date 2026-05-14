@@ -17,6 +17,8 @@ public static class DatabaseSeeder
 
         await EnsureSaleChannelsAsync(db, logger, cancellationToken);
 
+        await EnsureTreasuryCatalogsAsync(db, logger, cancellationToken);
+
         if (await db.Roles.AnyAsync(cancellationToken))
             return;
 
@@ -74,5 +76,23 @@ public static class DatabaseSeeder
                 CreatedAtUtc = utc
             });
         await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static async Task EnsureTreasuryCatalogsAsync(ApplicationDbContext db, ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        if (!await db.BankCatalogItems.AnyAsync(cancellationToken))
+        {
+            logger.LogInformation("Seeding bank catalog metadata.");
+            db.BankCatalogItems.AddRange(TreasuryBankCatalogSeedData.BuildItems());
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        if (!await db.EWalletCatalogItems.AnyAsync(cancellationToken))
+        {
+            logger.LogInformation("Seeding e-wallet catalog metadata.");
+            db.EWalletCatalogItems.AddRange(TreasuryEWalletCatalogSeedData.BuildItems());
+            await db.SaveChangesAsync(cancellationToken);
+        }
     }
 }

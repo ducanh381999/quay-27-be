@@ -10,4 +10,8 @@ public interface IGoodsReceiptRepository
     Task<GoodsReceipt?> GetProjectedAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<GoodsReceiptListItemDto>> ListAsync(ReceiptListQuery query, CancellationToken cancellationToken = default);
     Task<string> GenerateNextCodeAsync(CancellationToken cancellationToken = default);
+    Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<GoodsReceiptSupplierPaymentCashbookRowDto>> ListSupplierPaymentCashbookRowsAsync(
+        Guid goodsReceiptId,
+        CancellationToken cancellationToken = default);
 }

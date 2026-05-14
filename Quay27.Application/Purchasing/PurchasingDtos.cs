@@ -74,6 +74,24 @@ public sealed record PaymentAllocationDto(
     Guid? ReceivingAccountId,
     string? ReceivingAccountName);
 
+public sealed record GoodsReceiptSupplierPaymentCashbookRowDto(
+    Guid Id,
+    string Code,
+    DateTime OccurredAtUtc,
+    string? CreatorDisplayName,
+    string FundType,
+    string Status,
+    decimal Amount);
+
+public sealed record ReturnReceiptSupplierRefundCashbookRowDto(
+    Guid Id,
+    string Code,
+    DateTime OccurredAtUtc,
+    string? CreatorDisplayName,
+    string FundType,
+    string Status,
+    decimal Amount);
+
 public sealed record GoodsReceiptDto(
     Guid Id,
     string Code,
@@ -88,6 +106,7 @@ public sealed record GoodsReceiptDto(
     decimal PaidAmount,
     decimal SupplierDebtDelta,
     string Notes,
+    string CreatedBy,
     IReadOnlyList<ReceiptLineDto> Lines,
     IReadOnlyList<PaymentAllocationDto> PaymentAllocations);
 
@@ -105,6 +124,7 @@ public sealed record ReturnReceiptDto(
     decimal SupplierPaidAmount,
     decimal SupplierDebtDelta,
     string Notes,
+    string CreatedBy,
     IReadOnlyList<ReturnReceiptLineDto> Lines,
     IReadOnlyList<PaymentAllocationDto> PaymentAllocations);
 
@@ -130,7 +150,7 @@ public sealed record ReturnReceiptListItemDto(
 
 public sealed record ReceiptListQuery(
     string? Search,
-    string? Status,
+    IReadOnlyList<string>? Statuses,
     DateTime? From,
     DateTime? To,
     Guid? SupplierId = null,

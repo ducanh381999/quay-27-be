@@ -9,6 +9,30 @@ public static class CashbookCodeFormatting
     public const int MaxEventSegmentLength = 24;
     public const string ReceiptPrefix = "PT";
 
+    /// <summary>Prefix for supplier purchase payment lines tied to a goods receipt (<c>PC</c> + receipt code).</summary>
+    public const string SupplierGoodsReceiptPaymentPrefix = "PC";
+
+    public const int MaxCashbookEntryCodeLength = 64;
+
+    /// <summary>
+    /// Payment code for goods-receipt supplier allocations: <c>PC</c> + receipt code (e.g. <c>PCPN000004</c>).
+    /// When <paramref name="allocationCount"/> is greater than 1, appends <c>-1</c>, <c>-2</c>, … for uniqueness.
+    /// </summary>
+    public static string FormatGoodsReceiptSupplierPaymentCode(
+        string? goodsReceiptCode,
+        int allocationIndex,
+        int allocationCount)
+    {
+        var rc = string.IsNullOrWhiteSpace(goodsReceiptCode) ? "UNKNOWN" : goodsReceiptCode.Trim();
+        var suffix = allocationCount <= 1 ? "" : $"-{allocationIndex + 1}";
+        var reserved = SupplierGoodsReceiptPaymentPrefix.Length + suffix.Length;
+        var maxReceiptLen = Math.Max(1, MaxCashbookEntryCodeLength - reserved);
+        if (rc.Length > maxReceiptLen)
+            rc = rc[..maxReceiptLen];
+
+        return $"{SupplierGoodsReceiptPaymentPrefix}{rc}{suffix}";
+    }
+
     /// <summary>
     /// Builds a slug from <paramref name="raw"/> using only <c>[A-Z0-9_]</c>, uppercase, max length
     /// <see cref="MaxEventSegmentLength"/>. Empty input becomes <c>UNKNOWN</c>.

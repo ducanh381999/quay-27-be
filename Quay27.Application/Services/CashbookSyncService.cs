@@ -1,4 +1,5 @@
 using Quay27.Application.Abstractions;
+using Quay27.Application.Cashbook;
 using Quay27.Application.Common;
 using Quay27.Application.Repositories;
 using Quay27.Domain.Entities;
@@ -7,13 +8,20 @@ namespace Quay27.Application.Services;
 
 public sealed class CashbookSyncService : ICashbookSyncService
 {
+    public const string SupplierPaymentAllocationSourceKind = "SupplierPaymentAllocation";
+
     private readonly ICashbookRepository _cashbook;
     private readonly IPaymentCategoryRepository _categories;
+    private readonly ICurrentUser _currentUser;
 
-    public CashbookSyncService(ICashbookRepository cashbook, IPaymentCategoryRepository categories)
+    public CashbookSyncService(
+        ICashbookRepository cashbook,
+        IPaymentCategoryRepository categories,
+        ICurrentUser currentUser)
     {
         _cashbook = cashbook;
         _categories = categories;
+        _currentUser = currentUser;
     }
 
     public async Task SyncAfterSalesInvoiceStatusAsync(SalesInvoice invoice, string? previousStatus,
@@ -194,6 +202,157 @@ public sealed class CashbookSyncService : ICashbookSyncService
         };
 
         await _cashbook.AddEntryAsync(entry, cancellationToken);
+    }
+
+    public async Task SyncGoodsReceiptSupplierPaymentsAsync(GoodsReceipt receipt,
+        IReadOnlyList<Guid> previousPaymentAllocationIds, CancellationToken cancellationToken = default)
+    {
+        foreach (var id in previousPaymentAllocationIds)
+        {
+            await _cashbook.RemoveEntriesBySourceAsync(SupplierPaymentAllocationSourceKind, id, cancellationToken);
+        }
+
+        if (!IsGoodsReceiptCompleted(receipt.Status))
+            return;
+
+        var collectorUserId = _currentUser.UserId
+                              ?? throw new InvalidOperationException("Cần đăng nhập để ghi sổ quỹ.");
+        var cat = await _categories.GetByCodeAsync("SupplierPurchasePayment", cancellationToken)
+                  ?? throw new InvalidOperationException("Thiếu danh mục SupplierPurchasePayment (Chi Tiền trả NCC). Chạy migration.");
+
+        var display = SupplierDisplayName(receipt.Supplier?.Code, receipt.Supplier?.Name);
+        var occurredAtUtc = ToOccurredUtc(receipt.ReceiptDate);
+
+        var positiveAllocations = receipt.PaymentAllocations
+            .Where(a => MoneyMath.Round(a.Amount) > 0)
+            .ToList();
+        var allocCount = positiveAllocations.Count;
+
+        for (var i = 0; i < positiveAllocations.Count; i++)
+        {
+            var alloc = positiveAllocations[i];
+            var amount = MoneyMath.Round(alloc.Amount);
+            var code = CashbookCodeFormatting.FormatGoodsReceiptSupplierPaymentCode(receipt.Code, i, allocCount);
+            var entry = new CashbookEntry
+            {
+                Id = Guid.NewGuid(),
+                Code = code,
+                EntryType = "Payment",
+                FundType = MapSupplierAllocationFundType(alloc.PaymentMethod),
+                OccurredAtUtc = occurredAtUtc,
+                Amount = amount,
+                Note = $"Chi trả NCC — phiếu nhập {receipt.Code}",
+                PaymentCategoryId = cat.Id,
+                AffectsBusinessResult = false,
+                Status = "paid",
+                CollectorUserId = collectorUserId,
+                CounterpartyScope = "supplier",
+                CashbookPartyId = null,
+                CounterpartyDisplayName = display,
+                PartnerDebtMode = "not_applicable",
+                SourceKind = SupplierPaymentAllocationSourceKind,
+                SourceId = alloc.Id,
+                CreatedByUserId = collectorUserId,
+                StaffUserId = null,
+                CreatedAtUtc = DateTime.UtcNow,
+            };
+
+            await _cashbook.AddEntryAsync(entry, cancellationToken);
+        }
+    }
+
+    public async Task SyncReturnReceiptSupplierPaymentsAsync(ReturnReceipt receipt,
+        IReadOnlyList<Guid> previousPaymentAllocationIds, CancellationToken cancellationToken = default)
+    {
+        foreach (var id in previousPaymentAllocationIds)
+        {
+            await _cashbook.RemoveEntriesBySourceAsync(SupplierPaymentAllocationSourceKind, id, cancellationToken);
+        }
+
+        if (!IsReturnReceiptCompleted(receipt.Status))
+            return;
+
+        var collectorUserId = _currentUser.UserId
+                              ?? throw new InvalidOperationException("Cần đăng nhập để ghi sổ quỹ.");
+        var cat = await _categories.GetByCodeAsync("SupplierReturnRefund", cancellationToken)
+                  ?? throw new InvalidOperationException("Thiếu danh mục SupplierReturnRefund (Thu Tiền NCC hoàn trả). Chạy migration.");
+
+        var display = SupplierDisplayName(receipt.Supplier?.Code, receipt.Supplier?.Name);
+        var occurredAtUtc = ToOccurredUtc(receipt.ReturnDate);
+
+        foreach (var alloc in receipt.PaymentAllocations)
+        {
+            var amount = MoneyMath.Round(alloc.Amount);
+            if (amount <= 0)
+                continue;
+
+            var code = await _cashbook.GenerateNextReceiptCodeAsync("THN", cancellationToken);
+            var entry = new CashbookEntry
+            {
+                Id = Guid.NewGuid(),
+                Code = code,
+                EntryType = "Receipt",
+                FundType = MapSupplierAllocationFundType(alloc.PaymentMethod),
+                OccurredAtUtc = occurredAtUtc,
+                Amount = amount,
+                Note = $"Thu tiền NCC hoàn trả — phiếu trả hàng nhập {receipt.Code}",
+                PaymentCategoryId = cat.Id,
+                AffectsBusinessResult = false,
+                Status = "paid",
+                CollectorUserId = collectorUserId,
+                CounterpartyScope = "supplier",
+                CashbookPartyId = null,
+                CounterpartyDisplayName = display,
+                PartnerDebtMode = "not_applicable",
+                SourceKind = SupplierPaymentAllocationSourceKind,
+                SourceId = alloc.Id,
+                CreatedByUserId = collectorUserId,
+                StaffUserId = null,
+                CreatedAtUtc = DateTime.UtcNow,
+            };
+
+            await _cashbook.AddEntryAsync(entry, cancellationToken);
+        }
+    }
+
+    private static bool IsGoodsReceiptCompleted(string? status) =>
+        string.Equals(status?.Trim(), "received", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsReturnReceiptCompleted(string? status) =>
+        string.Equals(status?.Trim(), "returned", StringComparison.OrdinalIgnoreCase);
+
+    private static string SupplierDisplayName(string? code, string? name)
+    {
+        var c = code?.Trim() ?? string.Empty;
+        var n = name?.Trim() ?? string.Empty;
+        if (c.Length > 0 && n.Length > 0)
+            return $"{c} — {n}";
+        if (n.Length > 0)
+            return n;
+        if (c.Length > 0)
+            return c;
+        return "Nhà cung cấp";
+    }
+
+    private static DateTime ToOccurredUtc(DateTime localOrUnspecified)
+    {
+        if (localOrUnspecified.Kind == DateTimeKind.Utc)
+            return localOrUnspecified;
+        if (localOrUnspecified.Kind == DateTimeKind.Local)
+            return localOrUnspecified.ToUniversalTime();
+        return DateTime.SpecifyKind(localOrUnspecified, DateTimeKind.Local).ToUniversalTime();
+    }
+
+    private static string MapSupplierAllocationFundType(string paymentMethod)
+    {
+        var m = paymentMethod?.Trim().ToLowerInvariant() ?? "cash";
+        return m switch
+        {
+            "cash" => "cash",
+            "card" => "bank",
+            "banktransfer" => "bank",
+            _ => "cash",
+        };
     }
 
     private static string MapPaymentMethodToFundType(string paymentMethod)

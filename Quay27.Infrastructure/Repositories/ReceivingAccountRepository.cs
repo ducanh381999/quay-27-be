@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Quay27.Application.Repositories;
+using Quay27.Domain.Constants;
 using Quay27.Domain.Entities;
 using Quay27.Infrastructure.Persistence;
 
@@ -17,7 +18,7 @@ public class ReceivingAccountRepository : IReceivingAccountRepository
     public async Task<IReadOnlyList<ReceivingAccount>> ListActiveAsync(CancellationToken cancellationToken = default)
         => await _db.ReceivingAccounts
             .AsNoTracking()
-            .Where(x => x.IsActive)
+            .Where(x => x.IsActive && x.AccountKind == TreasuryConstants.AccountKindBank)
             .OrderBy(x => x.Name)
             .ToListAsync(cancellationToken);
 
