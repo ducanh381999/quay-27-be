@@ -13,146 +13,157 @@ public class AddSalesOrderPaymentFields : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.AddColumn<Guid>(
-            name: "ReceivingAccountId",
-            table: "SalesInvoices",
-            type: "char(36)",
-            nullable: true);
+        MigrationSqlHelper.AddColumnIfNotExists(
+            migrationBuilder,
+            "SalesInvoices",
+            "ReceivingAccountId",
+            "char(36) NULL");
 
-        migrationBuilder.AddColumn<Guid>(
-            name: "PriceListId",
-            table: "SalesReturns",
-            type: "char(36)",
-            nullable: true);
+        MigrationSqlHelper.AddColumnIfNotExists(
+            migrationBuilder,
+            "SalesReturns",
+            "PriceListId",
+            "char(36) NULL");
 
-        migrationBuilder.AddColumn<string>(
-            name: "PaymentMethod",
-            table: "SalesReturns",
-            type: "varchar(32)",
-            maxLength: 32,
-            nullable: true)
-            .Annotation("MySql:CharSet", "utf8mb4");
+        MigrationSqlHelper.AddColumnIfNotExists(
+            migrationBuilder,
+            "SalesReturns",
+            "PaymentMethod",
+            "varchar(32) NULL");
 
-        migrationBuilder.AddColumn<Guid>(
-            name: "ReceivingAccountId",
-            table: "SalesReturns",
-            type: "char(36)",
-            nullable: true);
+        MigrationSqlHelper.AddColumnIfNotExists(
+            migrationBuilder,
+            "SalesReturns",
+            "ReceivingAccountId",
+            "char(36) NULL");
 
-        migrationBuilder.AddColumn<decimal>(
-            name: "PaidAmount",
-            table: "SalesReturns",
-            type: "decimal(18,2)",
-            nullable: false,
-            defaultValue: 0m);
+        MigrationSqlHelper.AddColumnIfNotExists(
+            migrationBuilder,
+            "SalesReturns",
+            "PaidAmount",
+            "decimal(18,2) NOT NULL DEFAULT 0");
 
-        migrationBuilder.AddColumn<string>(
-            name: "RefundPaymentMethod",
-            table: "SalesReturns",
-            type: "varchar(32)",
-            maxLength: 32,
-            nullable: true)
-            .Annotation("MySql:CharSet", "utf8mb4");
+        MigrationSqlHelper.AddColumnIfNotExists(
+            migrationBuilder,
+            "SalesReturns",
+            "RefundPaymentMethod",
+            "varchar(32) NULL");
 
-        migrationBuilder.AddColumn<Guid>(
-            name: "RefundReceivingAccountId",
-            table: "SalesReturns",
-            type: "char(36)",
-            nullable: true);
+        MigrationSqlHelper.AddColumnIfNotExists(
+            migrationBuilder,
+            "SalesReturns",
+            "RefundReceivingAccountId",
+            "char(36) NULL");
 
-        migrationBuilder.CreateIndex(
-            name: "IX_SalesInvoices_ReceivingAccountId",
-            table: "SalesInvoices",
-            column: "ReceivingAccountId");
+        MigrationSqlHelper.CreateIndexIfNotExists(
+            migrationBuilder,
+            "IX_SalesInvoices_ReceivingAccountId",
+            "SalesInvoices",
+            "ReceivingAccountId");
 
-        migrationBuilder.CreateIndex(
-            name: "IX_SalesReturns_PriceListId",
-            table: "SalesReturns",
-            column: "PriceListId");
+        MigrationSqlHelper.CreateIndexIfNotExists(
+            migrationBuilder,
+            "IX_SalesReturns_PriceListId",
+            "SalesReturns",
+            "PriceListId");
 
-        migrationBuilder.CreateIndex(
-            name: "IX_SalesReturns_ReceivingAccountId",
-            table: "SalesReturns",
-            column: "ReceivingAccountId");
+        MigrationSqlHelper.CreateIndexIfNotExists(
+            migrationBuilder,
+            "IX_SalesReturns_ReceivingAccountId",
+            "SalesReturns",
+            "ReceivingAccountId");
 
-        migrationBuilder.CreateIndex(
-            name: "IX_SalesReturns_RefundReceivingAccountId",
-            table: "SalesReturns",
-            column: "RefundReceivingAccountId");
+        MigrationSqlHelper.CreateIndexIfNotExists(
+            migrationBuilder,
+            "IX_SalesReturns_RefundReceivingAccountId",
+            "SalesReturns",
+            "RefundReceivingAccountId");
 
-        migrationBuilder.AddForeignKey(
-            name: "FK_SalesInvoices_ReceivingAccounts_ReceivingAccountId",
-            table: "SalesInvoices",
-            column: "ReceivingAccountId",
-            principalTable: "ReceivingAccounts",
-            principalColumn: "Id",
-            onDelete: ReferentialAction.SetNull);
+        MigrationSqlHelper.AddForeignKeyIfNotExists(
+            migrationBuilder,
+            "FK_SalesInvoices_ReceivingAccounts_ReceivingAccountId",
+            "SalesInvoices",
+            "ReceivingAccountId",
+            "ReceivingAccounts",
+            "Id",
+            "SET NULL");
 
-        migrationBuilder.AddForeignKey(
-            name: "FK_SalesReturns_PriceLists_PriceListId",
-            table: "SalesReturns",
-            column: "PriceListId",
-            principalTable: "PriceLists",
-            principalColumn: "Id",
-            onDelete: ReferentialAction.SetNull);
+        MigrationSqlHelper.AddForeignKeyIfNotExists(
+            migrationBuilder,
+            "FK_SalesReturns_PriceLists_PriceListId",
+            "SalesReturns",
+            "PriceListId",
+            "PriceLists",
+            "Id",
+            "SET NULL");
 
-        migrationBuilder.AddForeignKey(
-            name: "FK_SalesReturns_ReceivingAccounts_ReceivingAccountId",
-            table: "SalesReturns",
-            column: "ReceivingAccountId",
-            principalTable: "ReceivingAccounts",
-            principalColumn: "Id",
-            onDelete: ReferentialAction.SetNull);
+        MigrationSqlHelper.AddForeignKeyIfNotExists(
+            migrationBuilder,
+            "FK_SalesReturns_ReceivingAccounts_ReceivingAccountId",
+            "SalesReturns",
+            "ReceivingAccountId",
+            "ReceivingAccounts",
+            "Id",
+            "SET NULL");
 
-        migrationBuilder.AddForeignKey(
-            name: "FK_SalesReturns_ReceivingAccounts_RefundReceivingAccountId",
-            table: "SalesReturns",
-            column: "RefundReceivingAccountId",
-            principalTable: "ReceivingAccounts",
-            principalColumn: "Id",
-            onDelete: ReferentialAction.SetNull);
+        MigrationSqlHelper.AddForeignKeyIfNotExists(
+            migrationBuilder,
+            "FK_SalesReturns_ReceivingAccounts_RefundReceivingAccountId",
+            "SalesReturns",
+            "RefundReceivingAccountId",
+            "ReceivingAccounts",
+            "Id",
+            "SET NULL");
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropForeignKey(
-            name: "FK_SalesInvoices_ReceivingAccounts_ReceivingAccountId",
-            table: "SalesInvoices");
+        MigrationSqlHelper.DropForeignKeyIfExists(
+            migrationBuilder,
+            "FK_SalesInvoices_ReceivingAccounts_ReceivingAccountId",
+            "SalesInvoices");
 
-        migrationBuilder.DropForeignKey(
-            name: "FK_SalesReturns_PriceLists_PriceListId",
-            table: "SalesReturns");
+        MigrationSqlHelper.DropForeignKeyIfExists(
+            migrationBuilder,
+            "FK_SalesReturns_PriceLists_PriceListId",
+            "SalesReturns");
 
-        migrationBuilder.DropForeignKey(
-            name: "FK_SalesReturns_ReceivingAccounts_ReceivingAccountId",
-            table: "SalesReturns");
+        MigrationSqlHelper.DropForeignKeyIfExists(
+            migrationBuilder,
+            "FK_SalesReturns_ReceivingAccounts_ReceivingAccountId",
+            "SalesReturns");
 
-        migrationBuilder.DropForeignKey(
-            name: "FK_SalesReturns_ReceivingAccounts_RefundReceivingAccountId",
-            table: "SalesReturns");
+        MigrationSqlHelper.DropForeignKeyIfExists(
+            migrationBuilder,
+            "FK_SalesReturns_ReceivingAccounts_RefundReceivingAccountId",
+            "SalesReturns");
 
-        migrationBuilder.DropIndex(
-            name: "IX_SalesInvoices_ReceivingAccountId",
-            table: "SalesInvoices");
+        MigrationSqlHelper.DropIndexIfExists(
+            migrationBuilder,
+            "IX_SalesInvoices_ReceivingAccountId",
+            "SalesInvoices");
 
-        migrationBuilder.DropIndex(
-            name: "IX_SalesReturns_PriceListId",
-            table: "SalesReturns");
+        MigrationSqlHelper.DropIndexIfExists(
+            migrationBuilder,
+            "IX_SalesReturns_PriceListId",
+            "SalesReturns");
 
-        migrationBuilder.DropIndex(
-            name: "IX_SalesReturns_ReceivingAccountId",
-            table: "SalesReturns");
+        MigrationSqlHelper.DropIndexIfExists(
+            migrationBuilder,
+            "IX_SalesReturns_ReceivingAccountId",
+            "SalesReturns");
 
-        migrationBuilder.DropIndex(
-            name: "IX_SalesReturns_RefundReceivingAccountId",
-            table: "SalesReturns");
+        MigrationSqlHelper.DropIndexIfExists(
+            migrationBuilder,
+            "IX_SalesReturns_RefundReceivingAccountId",
+            "SalesReturns");
 
-        migrationBuilder.DropColumn(name: "ReceivingAccountId", table: "SalesInvoices");
-        migrationBuilder.DropColumn(name: "PriceListId", table: "SalesReturns");
-        migrationBuilder.DropColumn(name: "PaymentMethod", table: "SalesReturns");
-        migrationBuilder.DropColumn(name: "ReceivingAccountId", table: "SalesReturns");
-        migrationBuilder.DropColumn(name: "PaidAmount", table: "SalesReturns");
-        migrationBuilder.DropColumn(name: "RefundPaymentMethod", table: "SalesReturns");
-        migrationBuilder.DropColumn(name: "RefundReceivingAccountId", table: "SalesReturns");
+        MigrationSqlHelper.DropColumnIfExists(migrationBuilder, "SalesInvoices", "ReceivingAccountId");
+        MigrationSqlHelper.DropColumnIfExists(migrationBuilder, "SalesReturns", "PriceListId");
+        MigrationSqlHelper.DropColumnIfExists(migrationBuilder, "SalesReturns", "PaymentMethod");
+        MigrationSqlHelper.DropColumnIfExists(migrationBuilder, "SalesReturns", "ReceivingAccountId");
+        MigrationSqlHelper.DropColumnIfExists(migrationBuilder, "SalesReturns", "PaidAmount");
+        MigrationSqlHelper.DropColumnIfExists(migrationBuilder, "SalesReturns", "RefundPaymentMethod");
+        MigrationSqlHelper.DropColumnIfExists(migrationBuilder, "SalesReturns", "RefundReceivingAccountId");
     }
 }
