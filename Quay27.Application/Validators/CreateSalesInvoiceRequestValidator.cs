@@ -8,8 +8,9 @@ public sealed class CreateSalesInvoiceRequestValidator : AbstractValidator<Creat
     public CreateSalesInvoiceRequestValidator(CreateOrderItemRequestValidator lineValidator)
     {
         RuleFor(x => x.PaymentMethod)
-            .Must(pm => string.Equals(pm, "cash", StringComparison.OrdinalIgnoreCase))
-            .WithMessage("Chỉ hỗ trợ tiền mặt.");
+            .Must(pm => !string.IsNullOrWhiteSpace(pm) &&
+                        OrderReceivingAccountResolver.AllowedPaymentMethods.Contains(pm.Trim()))
+            .WithMessage("Phương thức thanh toán không hợp lệ.");
         RuleFor(x => x.Note).MaximumLength(4000).When(x => x.Note != null);
         RuleFor(x => x.Items).NotEmpty();
         RuleForEach(x => x.Items).SetValidator(lineValidator);

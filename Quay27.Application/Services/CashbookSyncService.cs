@@ -155,15 +155,28 @@ public sealed class CashbookSyncService : ICashbookSyncService
         if (!isReturned)
             return;
 
-        var net = MoneyMath.Round(salesReturn.NetAmountDueFromCustomer);
-        if (net == 0)
-            return;
-
         if (await _cashbook.ExistsEntryForSourceAsync("SalesReturn", salesReturn.Id, cancellationToken))
             return;
 
-        var isReceipt = net > 0;
-        var amount = MoneyMath.Round(Math.Abs(net));
+        var net = MoneyMath.Round(salesReturn.NetAmountDueFromCustomer);
+        var refundDue = MoneyMath.Round(salesReturn.RefundDueAmount);
+
+        var isReceipt = salesReturn.HasExchangeItems && net > 0;
+        var isRefundPayout = !isReceipt && (refundDue > 0 || net < 0);
+        if (!isReceipt && !isRefundPayout)
+            return;
+
+        var amount = isReceipt
+            ? MoneyMath.Round(salesReturn.PaidAmount > 0 ? salesReturn.PaidAmount : net)
+            : MoneyMath.Round(net < 0 ? Math.Abs(net) : refundDue);
+
+        if (amount <= 0)
+            return;
+
+        var paymentMethod = isReceipt
+            ? salesReturn.PaymentMethod ?? "cash"
+            : salesReturn.RefundPaymentMethod ?? "cash";
+
         var customerCat = await _categories.GetByCodeAsync("CustomerPayment", cancellationToken)
                          ?? throw new InvalidOperationException("Payment category CustomerPayment is missing.");
         var expenseCat = await _categories.GetByCodeAsync("OtherExpense", cancellationToken)
@@ -181,10 +194,12 @@ public sealed class CashbookSyncService : ICashbookSyncService
             Id = Guid.NewGuid(),
             Code = code,
             EntryType = isReceipt ? "Receipt" : "Payment",
-            FundType = "cash",
+            FundType = MapPaymentMethodToFundType(paymentMethod),
             OccurredAtUtc = DateTime.UtcNow,
             Amount = amount,
-            Note = $"Trả hàng {salesReturn.Code} (NetAmountDueFromCustomer)",
+            Note = isReceipt
+                ? $"Thu thêm trả hàng {salesReturn.Code}"
+                : $"Hoàn tiền trả hàng {salesReturn.Code}",
             PaymentCategoryId = isReceipt ? customerCat.Id : expenseCat.Id,
             AffectsBusinessResult = false,
             Status = "paid",
@@ -197,7 +212,7 @@ public sealed class CashbookSyncService : ICashbookSyncService
             SourceKind = "SalesReturn",
             SourceId = salesReturn.Id,
             CreatedByUserId = salesReturn.CreatedByUserId,
-            StaffUserId = salesReturn.ReceivedByUserId,
+            StaffUserId = salesReturn.ReceivedByUserId ?? salesReturn.SellerUserId,
             CreatedAtUtc = DateTime.UtcNow,
         };
 

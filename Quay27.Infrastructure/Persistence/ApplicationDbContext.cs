@@ -700,6 +700,8 @@ public class ApplicationDbContext : DbContext
             e.HasOne(x => x.SellerUser).WithMany().HasForeignKey(x => x.SellerUserId).OnDelete(DeleteBehavior.SetNull);
             e.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.SetNull);
             e.HasOne(x => x.PriceList).WithMany().HasForeignKey(x => x.PriceListId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.ReceivingAccount).WithMany().HasForeignKey(x => x.ReceivingAccountId)
+                .OnDelete(DeleteBehavior.SetNull);
             e.HasOne(x => x.SaleChannel).WithMany().HasForeignKey(x => x.SaleChannelId).OnDelete(DeleteBehavior.SetNull);
         });
 
@@ -745,7 +747,15 @@ public class ApplicationDbContext : DbContext
             e.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.SetNull);
             e.HasOne(x => x.ReceivedByUser).WithMany().HasForeignKey(x => x.ReceivedByUserId).OnDelete(DeleteBehavior.SetNull);
             e.HasOne(x => x.SellerUser).WithMany().HasForeignKey(x => x.SellerUserId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.PriceList).WithMany().HasForeignKey(x => x.PriceListId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.ReceivingAccount).WithMany().HasForeignKey(x => x.ReceivingAccountId)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.RefundReceivingAccount).WithMany().HasForeignKey(x => x.RefundReceivingAccountId)
+                .OnDelete(DeleteBehavior.SetNull);
             e.HasOne(x => x.SaleChannel).WithMany().HasForeignKey(x => x.SaleChannelId).OnDelete(DeleteBehavior.SetNull);
+            e.Property(x => x.PaymentMethod).HasMaxLength(32);
+            e.Property(x => x.RefundPaymentMethod).HasMaxLength(32);
+            e.Property(x => x.PaidAmount).HasColumnType("decimal(18,2)");
         });
 
         modelBuilder.Entity<SalesReturnItem>(e =>

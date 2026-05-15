@@ -1854,6 +1854,9 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("varchar(64)");
 
+                    b.Property<Guid?>("ReceivingAccountId")
+                        .HasColumnType("char(36)");
+
                     b.Property<string>("ReturnReferenceCode")
                         .HasMaxLength(64)
                         .HasColumnType("varchar(64)");
@@ -1884,6 +1887,8 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.HasIndex("CustomerProfileId");
 
                     b.HasIndex("PriceListId");
+
+                    b.HasIndex("ReceivingAccountId");
 
                     b.HasIndex("SaleChannelId");
 
@@ -1989,14 +1994,34 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("varchar(128)");
 
+                    b.Property<decimal>("PaidAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("PaymentMethod")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<Guid?>("PriceListId")
+                        .HasColumnType("char(36)");
+
                     b.Property<decimal>("PurchaseDueAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<Guid?>("ReceivedByUserId")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid?>("ReceivingAccountId")
+                        .HasColumnType("char(36)");
+
                     b.Property<decimal>("RefundDueAmount")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("RefundPaymentMethod")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<Guid?>("RefundReceivingAccountId")
+                        .HasColumnType("char(36)");
 
                     b.Property<decimal>("ReturnDiscountAmount")
                         .HasColumnType("decimal(18,2)");
@@ -2034,7 +2059,13 @@ namespace Quay27.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CustomerProfileId");
 
+                    b.HasIndex("PriceListId");
+
                     b.HasIndex("ReceivedByUserId");
+
+                    b.HasIndex("ReceivingAccountId");
+
+                    b.HasIndex("RefundReceivingAccountId");
 
                     b.HasIndex("SaleChannelId");
 
@@ -2903,6 +2934,11 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                         .HasForeignKey("PriceListId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("Quay27.Domain.Entities.ReceivingAccount", "ReceivingAccount")
+                        .WithMany()
+                        .HasForeignKey("ReceivingAccountId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Quay27.Domain.Entities.SaleChannel", "SaleChannel")
                         .WithMany()
                         .HasForeignKey("SaleChannelId")
@@ -2918,6 +2954,8 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.Navigation("CustomerProfile");
 
                     b.Navigation("PriceList");
+
+                    b.Navigation("ReceivingAccount");
 
                     b.Navigation("SaleChannel");
 
@@ -2955,9 +2993,24 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                         .HasForeignKey("CustomerProfileId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("Quay27.Domain.Entities.PriceList", "PriceList")
+                        .WithMany()
+                        .HasForeignKey("PriceListId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Quay27.Domain.Entities.User", "ReceivedByUser")
                         .WithMany()
                         .HasForeignKey("ReceivedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Quay27.Domain.Entities.ReceivingAccount", "ReceivingAccount")
+                        .WithMany()
+                        .HasForeignKey("ReceivingAccountId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Quay27.Domain.Entities.ReceivingAccount", "RefundReceivingAccount")
+                        .WithMany()
+                        .HasForeignKey("RefundReceivingAccountId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Quay27.Domain.Entities.SaleChannel", "SaleChannel")
@@ -2974,7 +3027,13 @@ namespace Quay27.Infrastructure.Persistence.Migrations
 
                     b.Navigation("CustomerProfile");
 
+                    b.Navigation("PriceList");
+
                     b.Navigation("ReceivedByUser");
+
+                    b.Navigation("ReceivingAccount");
+
+                    b.Navigation("RefundReceivingAccount");
 
                     b.Navigation("SaleChannel");
 

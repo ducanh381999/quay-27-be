@@ -43,7 +43,10 @@ public sealed class CreateSalesInvoiceRequest
     public Guid? SellerUserId { get; set; }
     public Guid? SaleChannelId { get; set; }
 
+    public Guid? PriceListId { get; set; }
+
     public string PaymentMethod { get; set; } = "cash";
+    public Guid? ReceivingAccountId { get; set; }
     public decimal PaidAmount { get; set; }
 
     public decimal ClientSubtotal { get; set; }
@@ -60,7 +63,15 @@ public sealed class CreateSalesReturnRequest
     public Guid? CustomerProfileId { get; set; }
     public Guid? SellerUserId { get; set; }
     public Guid? SaleChannelId { get; set; }
+    public Guid? PriceListId { get; set; }
     public string? Note { get; set; }
+
+    public string? PaymentMethod { get; set; }
+    public Guid? ReceivingAccountId { get; set; }
+    public decimal PaidAmount { get; set; }
+
+    public string? RefundPaymentMethod { get; set; }
+    public Guid? RefundReceivingAccountId { get; set; }
 
     public IList<CreateOrderItemRequest> ReturnItems { get; set; } = new List<CreateOrderItemRequest>();
 

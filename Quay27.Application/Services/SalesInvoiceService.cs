@@ -18,6 +18,8 @@ public sealed class SalesInvoiceService : ISalesInvoiceService
     private readonly ICustomerProfileRepository _customers;
     private readonly IUserRepository _users;
     private readonly ISaleChannelRepository _channels;
+    private readonly IPriceListRepository _priceLists;
+    private readonly IReceivingAccountRepository _receivingAccounts;
     private readonly ICurrentUser _currentUser;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IValidator<CreateSalesInvoiceRequest> _createValidator;
@@ -30,6 +32,8 @@ public sealed class SalesInvoiceService : ISalesInvoiceService
         ICustomerProfileRepository customers,
         IUserRepository users,
         ISaleChannelRepository channels,
+        IPriceListRepository priceLists,
+        IReceivingAccountRepository receivingAccounts,
         ICurrentUser currentUser,
         IUnitOfWork unitOfWork,
         IValidator<CreateSalesInvoiceRequest> createValidator,
@@ -41,6 +45,8 @@ public sealed class SalesInvoiceService : ISalesInvoiceService
         _customers = customers;
         _users = users;
         _channels = channels;
+        _priceLists = priceLists;
+        _receivingAccounts = receivingAccounts;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
         _createValidator = createValidator;
@@ -85,6 +91,19 @@ public sealed class SalesInvoiceService : ISalesInvoiceService
             }
         }
 
+        if (request.PriceListId.HasValue &&
+            await _priceLists.GetByIdAsync(request.PriceListId.Value, cancellationToken) is null)
+        {
+            throw new ValidationException(new[]
+                { new ValidationFailure(nameof(request.PriceListId), "Bảng giá không tồn tại.") });
+        }
+
+        var (paymentMethod, receivingAccountId) = await OrderReceivingAccountResolver.ResolveAsync(
+            request.PaymentMethod,
+            request.ReceivingAccountId,
+            _receivingAccounts,
+            cancellationToken);
+
         var (serverSubtotal, productLookup) = await ValidateLinesAndAggregateAsync(request.Items, cancellationToken);
         OrderTotalsValidation.ValidateSubtotalDiscountTotal(
             serverSubtotal,
@@ -105,7 +124,9 @@ public sealed class SalesInvoiceService : ISalesInvoiceService
             SubtotalAmount = serverSubtotal,
             DiscountAmount = discount,
             PaidAmount = MoneyMath.Round(request.PaidAmount),
-            PaymentMethod = "cash",
+            PaymentMethod = paymentMethod,
+            PriceListId = request.PriceListId,
+            ReceivingAccountId = receivingAccountId,
             SellerUserId = request.SellerUserId,
             CreatedByUserId = _currentUser.UserId,
             SaleChannelId = request.SaleChannelId,

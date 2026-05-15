@@ -17,6 +17,8 @@ public sealed class SalesReturnService : ISalesReturnService
     private readonly ICustomerProfileRepository _customers;
     private readonly IUserRepository _users;
     private readonly ISaleChannelRepository _channels;
+    private readonly IPriceListRepository _priceLists;
+    private readonly IReceivingAccountRepository _receivingAccounts;
     private readonly ICurrentUser _currentUser;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IValidator<CreateSalesReturnRequest> _createValidator;
@@ -28,6 +30,8 @@ public sealed class SalesReturnService : ISalesReturnService
         ICustomerProfileRepository customers,
         IUserRepository users,
         ISaleChannelRepository channels,
+        IPriceListRepository priceLists,
+        IReceivingAccountRepository receivingAccounts,
         ICurrentUser currentUser,
         IUnitOfWork unitOfWork,
         IValidator<CreateSalesReturnRequest> createValidator,
@@ -38,6 +42,8 @@ public sealed class SalesReturnService : ISalesReturnService
         _customers = customers;
         _users = users;
         _channels = channels;
+        _priceLists = priceLists;
+        _receivingAccounts = receivingAccounts;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
         _createValidator = createValidator;
@@ -165,6 +171,42 @@ public sealed class SalesReturnService : ISalesReturnService
 
         var amountForList = hasExchange ? MoneyMath.Round(netDue) : MoneyMath.Round(refundDue);
 
+        if (request.PriceListId.HasValue &&
+            await _priceLists.GetByIdAsync(request.PriceListId.Value, cancellationToken) is null)
+        {
+            throw new ValidationException(new[]
+                { new ValidationFailure(nameof(request.PriceListId), "Bảng giá không tồn tại.") });
+        }
+
+        string? paymentMethod = null;
+        Guid? receivingAccountId = null;
+        var paidAmount = 0m;
+        if (hasExchange && netDue > 0)
+        {
+            var resolved = await OrderReceivingAccountResolver.ResolveAsync(
+                request.PaymentMethod,
+                request.ReceivingAccountId,
+                _receivingAccounts,
+                cancellationToken);
+            paymentMethod = resolved.PaymentMethod;
+            receivingAccountId = resolved.ReceivingAccountId;
+            paidAmount = MoneyMath.Round(request.PaidAmount);
+        }
+
+        string? refundPaymentMethod = null;
+        Guid? refundReceivingAccountId = null;
+        var needsRefundPtt = refundDue > 0 && (!hasExchange || netDue <= 0);
+        if (needsRefundPtt)
+        {
+            var resolved = await OrderReceivingAccountResolver.ResolveAsync(
+                request.RefundPaymentMethod,
+                request.RefundReceivingAccountId,
+                _receivingAccounts,
+                cancellationToken);
+            refundPaymentMethod = resolved.PaymentMethod;
+            refundReceivingAccountId = resolved.ReceivingAccountId;
+        }
+
         var entity = new SalesReturn
         {
             Id = id,
@@ -178,6 +220,12 @@ public sealed class SalesReturnService : ISalesReturnService
             CreatedByUserId = _currentUser.UserId,
             SellerUserId = request.SellerUserId,
             SaleChannelId = request.SaleChannelId,
+            PriceListId = request.PriceListId,
+            PaymentMethod = paymentMethod,
+            ReceivingAccountId = receivingAccountId,
+            PaidAmount = paidAmount,
+            RefundPaymentMethod = refundPaymentMethod,
+            RefundReceivingAccountId = refundReceivingAccountId,
             Note = request.Note,
             ReturnSubtotalAmount = returnSubtotal,
             ReturnDiscountAmount = returnDiscount,

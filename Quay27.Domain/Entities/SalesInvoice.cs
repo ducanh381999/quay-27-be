@@ -48,6 +48,9 @@ public sealed class SalesInvoice
     public Guid? PriceListId { get; set; }
     public PriceList? PriceList { get; set; }
 
+    public Guid? ReceivingAccountId { get; set; }
+    public ReceivingAccount? ReceivingAccount { get; set; }
+
     public Guid? SaleChannelId { get; set; }
     public SaleChannel? SaleChannel { get; set; }
 

@@ -30,6 +30,23 @@ public sealed class SalesReturn
     public Guid? SellerUserId { get; set; }
     public User? SellerUser { get; set; }
 
+    public Guid? PriceListId { get; set; }
+    public PriceList? PriceList { get; set; }
+
+    /// <summary>cash | wallet | transfer | card — thu thêm từ khách khi có đổi hàng.</summary>
+    public string? PaymentMethod { get; set; }
+
+    public Guid? ReceivingAccountId { get; set; }
+    public ReceivingAccount? ReceivingAccount { get; set; }
+
+    public decimal PaidAmount { get; set; }
+
+    /// <summary>cash | wallet | transfer | card — hoàn cho khách.</summary>
+    public string? RefundPaymentMethod { get; set; }
+
+    public Guid? RefundReceivingAccountId { get; set; }
+    public ReceivingAccount? RefundReceivingAccount { get; set; }
+
     public string? OtherCollectionType { get; set; }
 
     public decimal ReturnSubtotalAmount { get; set; }
