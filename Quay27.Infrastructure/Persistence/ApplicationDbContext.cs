@@ -653,6 +653,10 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.SetNull);
             e.HasOne(x => x.SaleChannel).WithMany().HasForeignKey(x => x.SaleChannelId)
                 .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.PriceList).WithMany().HasForeignKey(x => x.PriceListId)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.ReceivingAccount).WithMany().HasForeignKey(x => x.ReceivingAccountId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<PurchaseOrderItem>(e =>
@@ -663,6 +667,7 @@ public class ApplicationDbContext : DbContext
             e.Property(x => x.ProductName).HasMaxLength(512).IsRequired();
             e.Property(x => x.UnitPrice).HasColumnType("decimal(18,2)");
             e.Property(x => x.LineTotal).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Note).HasMaxLength(2000);
             e.HasOne(x => x.PurchaseOrder).WithMany(x => x.Items).HasForeignKey(x => x.PurchaseOrderId)
                 .OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId)

@@ -8,6 +8,8 @@ public sealed class ProductListItemDto
     public string Name { get; set; } = "";
     public string ItemType { get; set; } = "goods";
     public decimal SalePrice { get; set; }
+    /// <summary>Unit price from <see cref="ProductQuery.PriceListId"/> when provided and a row exists.</summary>
+    public decimal? SalePriceInPriceList { get; set; }
     public decimal CostPrice { get; set; }
     public int Stock { get; set; }
     public int CustomerOrders { get; set; }
@@ -41,6 +43,22 @@ public sealed class ProductListResponse
 {
     public IReadOnlyList<ProductListItemDto> Items { get; set; } = Array.Empty<ProductListItemDto>();
     public int Total { get; set; }
+}
+
+/// <summary>One row in the POS order-entry stock breakdown modal.</summary>
+public sealed class ProductOrderEntryStockRowDto
+{
+    public string Name { get; set; } = "";
+    public int Stock { get; set; }
+    public int CustomerOrders { get; set; }
+    public int AvailableToSell { get; set; }
+}
+
+public sealed class ProductOrderEntryStockResponse
+{
+    public Guid ProductId { get; set; }
+    public string ProductName { get; set; } = "";
+    public IReadOnlyList<ProductOrderEntryStockRowDto> Rows { get; set; } = Array.Empty<ProductOrderEntryStockRowDto>();
 }
 
 public sealed class ProductComboComponentDto
@@ -107,6 +125,9 @@ public sealed class ProductQuery
     public DateTimeOffset? ExpectedTo { get; set; }
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 100;
+
+    /// <summary>Optional: when set, list DTO includes <see cref="ProductListItemDto.SalePriceInPriceList"/> for matching rows.</summary>
+    public Guid? PriceListId { get; set; }
 }
 
 public sealed class ProductGroupDto

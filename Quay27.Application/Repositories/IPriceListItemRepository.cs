@@ -20,4 +20,10 @@ public interface IPriceListItemRepository
     Task AddRangeAsync(
         IReadOnlyList<PriceListItem> items,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Map product id to list price for the given price list (missing products omitted).</summary>
+    Task<IReadOnlyDictionary<Guid, decimal>> GetPricesByProductIdsAsync(
+        Guid priceListId,
+        IReadOnlyList<Guid> productIds,
+        CancellationToken cancellationToken = default);
 }

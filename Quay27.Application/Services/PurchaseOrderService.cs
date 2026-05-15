@@ -6,6 +6,7 @@ using Quay27.Application.Common.Exceptions;
 using Quay27.Application.Cashbook;
 using Quay27.Application.Orders;
 using Quay27.Application.Repositories;
+using Quay27.Domain.Constants;
 using Quay27.Domain.Entities;
 
 namespace Quay27.Application.Services;
@@ -17,6 +18,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
     private readonly ICustomerProfileRepository _customers;
     private readonly IUserRepository _users;
     private readonly ISaleChannelRepository _channels;
+    private readonly IPriceListRepository _priceLists;
+    private readonly IReceivingAccountRepository _receivingAccounts;
     private readonly ICurrentUser _currentUser;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IValidator<CreatePurchaseOrderRequest> _createValidator;
@@ -28,6 +31,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         ICustomerProfileRepository customers,
         IUserRepository users,
         ISaleChannelRepository channels,
+        IPriceListRepository priceLists,
+        IReceivingAccountRepository receivingAccounts,
         ICurrentUser currentUser,
         IUnitOfWork unitOfWork,
         IValidator<CreatePurchaseOrderRequest> createValidator,
@@ -38,6 +43,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         _customers = customers;
         _users = users;
         _channels = channels;
+        _priceLists = priceLists;
+        _receivingAccounts = receivingAccounts;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
         _createValidator = createValidator;
@@ -68,6 +75,58 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         {
             throw new ValidationException(new[]
                 { new ValidationFailure(nameof(request.SaleChannelId), "Kênh bán không tồn tại.") });
+        }
+
+        if (request.PriceListId.HasValue &&
+            await _priceLists.GetByIdAsync(request.PriceListId.Value, cancellationToken) is null)
+        {
+            throw new ValidationException(new[]
+                { new ValidationFailure(nameof(request.PriceListId), "Bảng giá không tồn tại.") });
+        }
+
+        var paymentMethod = (request.PaymentMethod ?? "cash").Trim().ToLowerInvariant();
+        Guid? receivingAccountId = null;
+        if (paymentMethod is "transfer" or "card")
+        {
+            if (!request.ReceivingAccountId.HasValue)
+            {
+                throw new ValidationException(new[]
+                {
+                    new ValidationFailure(nameof(request.ReceivingAccountId),
+                        "Chọn tài khoản ngân hàng cho phương thức thanh toán này."),
+                });
+            }
+
+            var acc = await _receivingAccounts.GetByIdAsync(request.ReceivingAccountId.Value, cancellationToken);
+            if (acc is null || !string.Equals(acc.AccountKind, TreasuryConstants.AccountKindBank,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ValidationException(new[]
+                    { new ValidationFailure(nameof(request.ReceivingAccountId), "Tài khoản ngân hàng không hợp lệ.") });
+            }
+
+            receivingAccountId = acc.Id;
+        }
+        else if (paymentMethod == "wallet")
+        {
+            if (!request.ReceivingAccountId.HasValue)
+            {
+                throw new ValidationException(new[]
+                {
+                    new ValidationFailure(nameof(request.ReceivingAccountId),
+                        "Chọn ví điện tử cho phương thức thanh toán này."),
+                });
+            }
+
+            var acc = await _receivingAccounts.GetByIdAsync(request.ReceivingAccountId.Value, cancellationToken);
+            if (acc is null || !string.Equals(acc.AccountKind, TreasuryConstants.AccountKindEWallet,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ValidationException(new[]
+                    { new ValidationFailure(nameof(request.ReceivingAccountId), "Ví điện tử không hợp lệ.") });
+            }
+
+            receivingAccountId = acc.Id;
         }
 
         CustomerProfile? customer = null;
@@ -135,7 +194,9 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             DiscountAmount = discount,
             AmountDue = amountDue,
             AmountPaid = amountPaid,
-            PaymentMethod = "cash",
+            PaymentMethod = paymentMethod,
+            PriceListId = request.PriceListId,
+            ReceivingAccountId = receivingAccountId,
             DeliveryFromUtc = request.ScheduledDeliveryUtc,
             SellerUserId = request.SellerUserId,
             CreatedByUserId = _currentUser.UserId,
@@ -157,6 +218,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
                 Quantity = line.Quantity,
                 UnitPrice = MoneyMath.Round(line.UnitPrice),
                 LineTotal = lineTotal,
+                Note = string.IsNullOrWhiteSpace(line.Note) ? null : line.Note.Trim(),
             });
         }
 

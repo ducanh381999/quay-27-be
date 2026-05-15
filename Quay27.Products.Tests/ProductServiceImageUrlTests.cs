@@ -2,6 +2,7 @@ using Quay27.Application.Abstractions;
 using Quay27.Application.Products;
 using Quay27.Application.Repositories;
 using Quay27.Application.Services;
+using Quay27.Application.Orders;
 using Quay27.Domain.Entities;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -78,6 +79,7 @@ public class ProductServiceImageUrlTests
             new NoopGroups(),
             new NoopPriceLists(),
             new NoopPriceListItems(),
+            new NoopPurchaseOrders(),
             new FakeCurrentUser(isAuthenticated: true),
             new ThrowingUnitOfWork(),
             NullLogger<ProductService>.Instance);
@@ -125,6 +127,7 @@ public class ProductServiceImageUrlTests
             new NoopGroups(),
             new NoopPriceLists(),
             new NoopPriceListItems(),
+            new NoopPurchaseOrders(),
             new FakeCurrentUser(isAuthenticated: true),
             new NoopUnitOfWork(),
             NullLogger<ProductService>.Instance);
@@ -138,6 +141,7 @@ public class ProductServiceImageUrlTests
             new NoopGroups(),
             new NoopPriceLists(),
             new NoopPriceListItems(),
+            new NoopPurchaseOrders(),
             new FakeCurrentUser(isAuthenticated: true),
             new NoopUnitOfWork(),
             NullLogger<ProductService>.Instance);
@@ -259,6 +263,29 @@ public class ProductServiceImageUrlTests
         public Task AddRangeAsync(IReadOnlyList<PriceListItem> items, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<PriceListItem?> GetTrackedAsync(Guid priceListId, Guid productId, CancellationToken cancellationToken = default) => Task.FromResult<PriceListItem?>(null);
         public Task<IReadOnlyList<PriceListItem>> ListByPriceListIdsAsync(IReadOnlyList<Guid> priceListIds, string? search, string? groupId, string? stock, IReadOnlyList<Guid>? filterGroupIds, CancellationToken cancellationToken = default) => Task.FromResult((IReadOnlyList<PriceListItem>)Array.Empty<PriceListItem>());
+        public Task<IReadOnlyDictionary<Guid, decimal>> GetPricesByProductIdsAsync(Guid priceListId, IReadOnlyList<Guid> productIds, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyDictionary<Guid, decimal>>(new Dictionary<Guid, decimal>());
+    }
+
+    private sealed class NoopPurchaseOrders : IPurchaseOrderRepository
+    {
+        public Task AddAsync(PurchaseOrder entity, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task<string> GenerateNextCodeAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult("DH000001");
+
+        public Task<PurchaseOrder?> GetByIdNoTrackingAsync(Guid id, CancellationToken cancellationToken = default) =>
+            Task.FromResult<PurchaseOrder?>(null);
+
+        public Task<PurchaseOrder?> GetTrackedByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+            Task.FromResult<PurchaseOrder?>(null);
+
+        public Task<IReadOnlyList<PurchaseOrderListItemDto>> ListAsync(PurchaseOrderListQuery query,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult((IReadOnlyList<PurchaseOrderListItemDto>)Array.Empty<PurchaseOrderListItemDto>());
+
+        public Task<int> SumReservedQuantityForProductInOpenOrdersAsync(Guid productId,
+            CancellationToken cancellationToken = default) => Task.FromResult(0);
     }
 
 }

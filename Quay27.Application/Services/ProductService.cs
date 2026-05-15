@@ -15,6 +15,7 @@ public class ProductService : IProductService
     private readonly IProductGroupRepository _groups;
     private readonly IPriceListRepository _priceLists;
     private readonly IPriceListItemRepository _priceListItems;
+    private readonly IPurchaseOrderRepository _purchaseOrders;
     private readonly ICurrentUser _currentUser;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<ProductService> _logger;
@@ -24,6 +25,7 @@ public class ProductService : IProductService
         IProductGroupRepository groups,
         IPriceListRepository priceLists,
         IPriceListItemRepository priceListItems,
+        IPurchaseOrderRepository purchaseOrders,
         ICurrentUser currentUser,
         IUnitOfWork unitOfWork,
         ILogger<ProductService> logger)
@@ -32,6 +34,7 @@ public class ProductService : IProductService
         _groups = groups;
         _priceLists = priceLists;
         _priceListItems = priceListItems;
+        _purchaseOrders = purchaseOrders;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
         _logger = logger;
@@ -41,7 +44,32 @@ public class ProductService : IProductService
     {
         EnsureAuthenticated();
         var (items, total) = await _products.ListAsync(query, cancellationToken);
-        return new ProductListResponse { Items = items.Select(x => Map(x)).ToList(), Total = total };
+        IReadOnlyDictionary<Guid, decimal>? listPrices = null;
+        if (query.PriceListId is { } priceListId)
+        {
+            var pl = await _priceLists.GetByIdAsync(priceListId, cancellationToken);
+            if (pl is { IsDeleted: false } &&
+                string.Equals(pl.Status, "active", StringComparison.OrdinalIgnoreCase))
+            {
+                var ids = items.Select(i => i.Id).ToList();
+                if (ids.Count > 0)
+                {
+                    listPrices =
+                        await _priceListItems.GetPricesByProductIdsAsync(priceListId, ids, cancellationToken);
+                }
+            }
+        }
+
+        return new ProductListResponse
+        {
+            Items = items
+                .Select(x => Map(
+                    x,
+                    null,
+                    listPrices != null && listPrices.TryGetValue(x.Id, out var lp) ? lp : null))
+                .ToList(),
+            Total = total,
+        };
     }
 
     public async Task<ProductListItemDto> GetAsync(Guid id, CancellationToken cancellationToken = default)
@@ -50,6 +78,43 @@ public class ProductService : IProductService
         var item = await _products.GetByIdAsync(id, cancellationToken);
         if (item is null) throw new NotFoundException("Product not found.");
         return Map(item);
+    }
+
+    public async Task<ProductOrderEntryStockResponse> GetOrderEntryStockAsync(Guid productId,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        var item = await _products.GetByIdAsync(productId, cancellationToken);
+        if (item is null) throw new NotFoundException("Product not found.");
+
+        var reserved = await _purchaseOrders.SumReservedQuantityForProductInOpenOrdersAsync(productId, cancellationToken);
+        var stock = item.Stock;
+        var customerOrders = reserved;
+        var available = Math.Max(0, stock - customerOrders);
+
+        var totalRow = new ProductOrderEntryStockRowDto
+        {
+            Name = "Tổng cộng",
+            Stock = stock,
+            CustomerOrders = customerOrders,
+            AvailableToSell = available,
+        };
+
+        // Placeholder second row until multi-branch inventory exists (same numbers as total).
+        var branchRow = new ProductOrderEntryStockRowDto
+        {
+            Name = "Chi nhánh trung tâm",
+            Stock = stock,
+            CustomerOrders = customerOrders,
+            AvailableToSell = available,
+        };
+
+        return new ProductOrderEntryStockResponse
+        {
+            ProductId = item.Id,
+            ProductName = item.Name,
+            Rows = new[] { totalRow, branchRow },
+        };
     }
 
     public async Task<ProductListItemDto> CreateAsync(UpsertProductRequest request, CancellationToken cancellationToken = default)
@@ -846,7 +911,7 @@ public class ProductService : IProductService
         return created;
     }
 
-    private static ProductListItemDto Map(Product x, ProductGroup? g = null)
+    private static ProductListItemDto Map(Product x, ProductGroup? g = null, decimal? salePriceInPriceList = null)
     {
         var group = g ?? x.Group;
         return new ProductListItemDto
@@ -857,6 +922,7 @@ public class ProductService : IProductService
             Name = x.Name,
             ItemType = x.ItemType,
             SalePrice = x.SalePrice,
+            SalePriceInPriceList = salePriceInPriceList,
             CostPrice = x.CostPrice,
             Stock = x.Stock,
             CustomerOrders = 0,

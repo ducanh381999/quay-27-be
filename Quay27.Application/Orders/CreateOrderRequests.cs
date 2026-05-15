@@ -7,6 +7,8 @@ public sealed class CreateOrderItemRequest
     public string ProductName { get; set; } = string.Empty;
     public int Quantity { get; set; }
     public decimal UnitPrice { get; set; }
+
+    public string? Note { get; set; }
 }
 
 public sealed class CreatePurchaseOrderRequest
@@ -15,8 +17,13 @@ public sealed class CreatePurchaseOrderRequest
     public Guid? SellerUserId { get; set; }
     public Guid? SaleChannelId { get; set; }
 
-    /// <summary>cash | wallet | transfer | card — UI hiện tại chỉ gửi cash.</summary>
+    public Guid? PriceListId { get; set; }
+
+    /// <summary>cash | wallet | transfer | card</summary>
     public string PaymentMethod { get; set; } = "cash";
+
+    /// <summary>Required when payment is transfer, card, or wallet.</summary>
+    public Guid? ReceivingAccountId { get; set; }
 
     public decimal AmountPaid { get; set; }
 

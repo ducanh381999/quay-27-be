@@ -5,11 +5,14 @@ namespace Quay27.Application.Validators;
 
 public sealed class CreatePurchaseOrderRequestValidator : AbstractValidator<CreatePurchaseOrderRequest>
 {
+    private static readonly HashSet<string> AllowedPaymentMethods =
+        new(StringComparer.OrdinalIgnoreCase) { "cash", "transfer", "card", "wallet" };
+
     public CreatePurchaseOrderRequestValidator(CreateOrderItemRequestValidator lineValidator)
     {
         RuleFor(x => x.PaymentMethod)
-            .Must(pm => string.Equals(pm, "cash", StringComparison.OrdinalIgnoreCase))
-            .WithMessage("Chỉ hỗ trợ tiền mặt.");
+            .Must(pm => !string.IsNullOrWhiteSpace(pm) && AllowedPaymentMethods.Contains(pm.Trim()))
+            .WithMessage("Phương thức thanh toán không hợp lệ.");
         RuleFor(x => x.Note).MaximumLength(4000).When(x => x.Note != null);
         RuleFor(x => x.Items).NotEmpty();
         RuleForEach(x => x.Items).SetValidator(lineValidator);

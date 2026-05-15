@@ -25,4 +25,6 @@ public interface IProductService
     Task ApplyPriceFormulaAsync(Guid priceListId, ApplyPriceFormulaRequest request, CancellationToken cancellationToken = default);
     Task<PriceListImportResult> ImportPriceListAsync(PriceListImportRequest request, CancellationToken cancellationToken = default);
     Task<byte[]?> ExportPriceListAsync(PriceListItemsQuery query, CancellationToken cancellationToken = default);
+    Task<ProductOrderEntryStockResponse> GetOrderEntryStockAsync(Guid productId,
+        CancellationToken cancellationToken = default);
 }

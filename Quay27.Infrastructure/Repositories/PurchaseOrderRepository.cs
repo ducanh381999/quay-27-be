@@ -97,4 +97,21 @@ public sealed class PurchaseOrderRepository : IPurchaseOrderRepository
 
         return $"{prefix}{(number + 1).ToString().PadLeft(6, '0')}";
     }
+
+    public async Task<int> SumReservedQuantityForProductInOpenOrdersAsync(Guid productId,
+        CancellationToken cancellationToken = default)
+    {
+        var openStatuses = new[] { "draft", "confirmed", "shipping" };
+        var sum = await _db.PurchaseOrderItems
+            .AsNoTracking()
+            .Where(i => i.ProductId == productId)
+            .Join(
+                _db.PurchaseOrders.AsNoTracking(),
+                item => item.PurchaseOrderId,
+                order => order.Id,
+                (item, order) => new { item.Quantity, order.Status })
+            .Where(x => openStatuses.Contains(x.Status))
+            .SumAsync(x => (int?)x.Quantity, cancellationToken);
+        return sum ?? 0;
+    }
 }

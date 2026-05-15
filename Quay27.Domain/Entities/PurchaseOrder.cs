@@ -45,5 +45,12 @@ public sealed class PurchaseOrder
     public Guid? SaleChannelId { get; set; }
     public SaleChannel? SaleChannel { get; set; }
 
+    public Guid? PriceListId { get; set; }
+    public PriceList? PriceList { get; set; }
+
+    /// <summary>Receiving bank / e-wallet account when payment is transfer, card, or wallet.</summary>
+    public Guid? ReceivingAccountId { get; set; }
+    public ReceivingAccount? ReceivingAccount { get; set; }
+
     public ICollection<PurchaseOrderItem> Items { get; set; } = new List<PurchaseOrderItem>();
 }

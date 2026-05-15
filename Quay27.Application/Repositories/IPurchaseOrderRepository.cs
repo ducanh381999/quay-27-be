@@ -15,4 +15,8 @@ public interface IPurchaseOrderRepository
     Task<PurchaseOrder?> GetTrackedByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<PurchaseOrder?> GetByIdNoTrackingAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>Sum of line quantities on non-terminal purchase orders for this product (draft/confirmed/shipping).</summary>
+    Task<int> SumReservedQuantityForProductInOpenOrdersAsync(Guid productId,
+        CancellationToken cancellationToken = default);
 }

@@ -78,4 +78,23 @@ public class PriceListItemRepository : IPriceListItemRepository
         IReadOnlyList<PriceListItem> items,
         CancellationToken cancellationToken = default) =>
         _db.PriceListItems.AddRangeAsync(items, cancellationToken);
+
+    public async Task<IReadOnlyDictionary<Guid, decimal>> GetPricesByProductIdsAsync(
+        Guid priceListId,
+        IReadOnlyList<Guid> productIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (productIds.Count == 0)
+        {
+            return new Dictionary<Guid, decimal>();
+        }
+
+        var rows = await _db.PriceListItems
+            .AsNoTracking()
+            .Where(x => x.PriceListId == priceListId && productIds.Contains(x.ProductId))
+            .Select(x => new { x.ProductId, x.Price })
+            .ToListAsync(cancellationToken);
+
+        return rows.ToDictionary(x => x.ProductId, x => x.Price);
+    }
 }

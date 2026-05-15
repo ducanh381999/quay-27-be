@@ -39,6 +39,7 @@ public class ProductsController : ControllerBase
         [FromQuery] DateTimeOffset? expectedTo,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 100,
+        [FromQuery] Guid? priceListId = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _service.ListAsync(new ProductQuery
@@ -53,10 +54,18 @@ public class ProductsController : ControllerBase
             ExpectedFrom = expectedFrom,
             ExpectedTo = expectedTo,
             Page = page,
-            PageSize = pageSize
+            PageSize = pageSize,
+            PriceListId = priceListId,
         }, cancellationToken);
         return Ok(result);
     }
+
+    [HttpGet("{id:guid}/order-entry-stock")]
+    [ProducesResponseType(typeof(ProductOrderEntryStockResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ProductOrderEntryStockResponse>> GetOrderEntryStock(Guid id,
+        CancellationToken cancellationToken) =>
+        Ok(await _service.GetOrderEntryStockAsync(id, cancellationToken));
 
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(ProductListItemDto), StatusCodes.Status200OK)]
