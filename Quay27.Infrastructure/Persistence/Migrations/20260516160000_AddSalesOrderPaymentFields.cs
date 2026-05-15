@@ -13,29 +13,17 @@ public class AddSalesOrderPaymentFields : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        MigrationSqlHelper.AddColumnIfNotExists(
-            migrationBuilder,
-            "SalesInvoices",
-            "ReceivingAccountId",
-            "char(36) NULL");
+        MigrationSqlHelper.EnsureGuidFkColumn(migrationBuilder, "SalesInvoices", "ReceivingAccountId");
 
-        MigrationSqlHelper.AddColumnIfNotExists(
-            migrationBuilder,
-            "SalesReturns",
-            "PriceListId",
-            "char(36) NULL");
+        MigrationSqlHelper.EnsureGuidFkColumn(migrationBuilder, "SalesReturns", "PriceListId");
+        MigrationSqlHelper.EnsureGuidFkColumn(migrationBuilder, "SalesReturns", "ReceivingAccountId");
+        MigrationSqlHelper.EnsureGuidFkColumn(migrationBuilder, "SalesReturns", "RefundReceivingAccountId");
 
         MigrationSqlHelper.AddColumnIfNotExists(
             migrationBuilder,
             "SalesReturns",
             "PaymentMethod",
-            "varchar(32) NULL");
-
-        MigrationSqlHelper.AddColumnIfNotExists(
-            migrationBuilder,
-            "SalesReturns",
-            "ReceivingAccountId",
-            "char(36) NULL");
+            MigrationSqlHelper.Varchar32Nullable);
 
         MigrationSqlHelper.AddColumnIfNotExists(
             migrationBuilder,
@@ -47,13 +35,7 @@ public class AddSalesOrderPaymentFields : Migration
             migrationBuilder,
             "SalesReturns",
             "RefundPaymentMethod",
-            "varchar(32) NULL");
-
-        MigrationSqlHelper.AddColumnIfNotExists(
-            migrationBuilder,
-            "SalesReturns",
-            "RefundReceivingAccountId",
-            "char(36) NULL");
+            MigrationSqlHelper.Varchar32Nullable);
 
         MigrationSqlHelper.CreateIndexIfNotExists(
             migrationBuilder,

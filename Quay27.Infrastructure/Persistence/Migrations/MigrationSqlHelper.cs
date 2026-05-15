@@ -7,6 +7,40 @@ namespace Quay27.Infrastructure.Persistence.Migrations;
 /// </summary>
 internal static class MigrationSqlHelper
 {
+    /// <summary>Matches Pomelo Guid FK columns (see PurchaseOrders ReceivingAccountId migration).</summary>
+    public const string GuidFkColumnNullable =
+        "char(36) CHARACTER SET ascii COLLATE ascii_general_ci NULL";
+
+    public const string Varchar32Nullable =
+        "varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL";
+
+    /// <summary>Add Guid FK column if missing, or MODIFY to ascii collation when already present.</summary>
+    public static void EnsureGuidFkColumn(
+        MigrationBuilder migrationBuilder,
+        string table,
+        string column)
+    {
+        AddColumnIfNotExists(migrationBuilder, table, column, GuidFkColumnNullable);
+
+        migrationBuilder.Sql($"""
+            SET @__q27_exists := (
+                SELECT COUNT(*)
+                FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = '{table}'
+                  AND COLUMN_NAME = '{column}'
+            );
+            SET @__q27_sql := IF(
+                @__q27_exists > 0,
+                'ALTER TABLE `{table}` MODIFY COLUMN `{column}` {GuidFkColumnNullable}',
+                'SELECT 1'
+            );
+            PREPARE __q27_stmt FROM @__q27_sql;
+            EXECUTE __q27_stmt;
+            DEALLOCATE PREPARE __q27_stmt;
+            """);
+    }
+
     public static void AddColumnIfNotExists(
         MigrationBuilder migrationBuilder,
         string table,
