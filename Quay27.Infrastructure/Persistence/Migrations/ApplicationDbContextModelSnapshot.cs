@@ -1901,6 +1901,10 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("LineTotal")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("Note")
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
                     b.Property<string>("ProductCode")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -2048,6 +2052,10 @@ namespace Quay27.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("LineTotal")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("Note")
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
                     b.Property<string>("ProductCode")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -2087,6 +2095,10 @@ namespace Quay27.Infrastructure.Persistence.Migrations
 
                     b.Property<decimal>("LineTotal")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
 
                     b.Property<string>("ProductCode")
                         .IsRequired()

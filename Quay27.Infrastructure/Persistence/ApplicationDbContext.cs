@@ -711,6 +711,7 @@ public class ApplicationDbContext : DbContext
             e.Property(x => x.ProductName).HasMaxLength(512).IsRequired();
             e.Property(x => x.UnitPrice).HasColumnType("decimal(18,2)");
             e.Property(x => x.LineTotal).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Note).HasMaxLength(2000);
             e.HasOne(x => x.SalesInvoice).WithMany(x => x.Items).HasForeignKey(x => x.SalesInvoiceId)
                 .OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId)
@@ -755,6 +756,7 @@ public class ApplicationDbContext : DbContext
             e.Property(x => x.ProductName).HasMaxLength(512).IsRequired();
             e.Property(x => x.UnitPrice).HasColumnType("decimal(18,2)");
             e.Property(x => x.LineTotal).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Note).HasMaxLength(2000);
             e.HasOne(x => x.SalesReturn).WithMany(x => x.ReturnItems).HasForeignKey(x => x.SalesReturnId)
                 .OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId)
@@ -769,6 +771,7 @@ public class ApplicationDbContext : DbContext
             e.Property(x => x.ProductName).HasMaxLength(512).IsRequired();
             e.Property(x => x.UnitPrice).HasColumnType("decimal(18,2)");
             e.Property(x => x.LineTotal).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Note).HasMaxLength(2000);
             e.HasOne(x => x.SalesReturn).WithMany(x => x.ExchangeItems).HasForeignKey(x => x.SalesReturnId)
                 .OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId)

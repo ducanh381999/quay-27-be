@@ -129,6 +129,7 @@ public sealed class SalesInvoiceService : ISalesInvoiceService
                 Quantity = line.Quantity,
                 UnitPrice = MoneyMath.Round(line.UnitPrice),
                 LineTotal = lineTotal,
+                Note = string.IsNullOrWhiteSpace(line.Note) ? null : line.Note.Trim(),
             });
         }
 

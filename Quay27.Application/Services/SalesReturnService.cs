@@ -206,6 +206,7 @@ public sealed class SalesReturnService : ISalesReturnService
                 Quantity = line.Quantity,
                 UnitPrice = MoneyMath.Round(line.UnitPrice),
                 LineTotal = lineTotal,
+                Note = string.IsNullOrWhiteSpace(line.Note) ? null : line.Note.Trim(),
             });
         }
 
@@ -225,6 +226,7 @@ public sealed class SalesReturnService : ISalesReturnService
                     Quantity = line.Quantity,
                     UnitPrice = MoneyMath.Round(line.UnitPrice),
                     LineTotal = lineTotal,
+                    Note = string.IsNullOrWhiteSpace(line.Note) ? null : line.Note.Trim(),
                 });
             }
         }
