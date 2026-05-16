@@ -13,4 +13,8 @@ public sealed record EndOfDayReportQuery(
     Guid? SellerUserId,
     Guid? CreatedByUserId,
     string? PaymentMethod,
-    Guid? SaleChannelId);
+    Guid? SaleChannelId,
+    bool GroupSameProducts = false,
+    string? ProductSearch = null,
+    string? ProductType = null,
+    Guid? ProductGroupId = null);

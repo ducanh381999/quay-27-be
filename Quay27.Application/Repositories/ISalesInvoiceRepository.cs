@@ -15,6 +15,19 @@ public interface ISalesInvoiceRepository
         DateTime toUtc,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<EndOfDayProductRowDto>> ListForEndOfDayProductsAsync(
+        EndOfDayReportQuery query,
+        DateTime fromUtc,
+        DateTime toUtc,
+        CancellationToken cancellationToken = default);
+
+    Task<(IReadOnlyList<EndOfDaySalesSummaryRowDto> ValueRows, IReadOnlyList<EndOfDaySalesCountRowDto> CountRows)>
+        GetSalesSummaryForEndOfDayAsync(
+            EndOfDayReportQuery query,
+            DateTime fromUtc,
+            DateTime toUtc,
+            CancellationToken cancellationToken = default);
+
     Task<string> GenerateNextCodeAsync(CancellationToken cancellationToken = default);
 
     Task AddAsync(SalesInvoice entity, CancellationToken cancellationToken = default);

@@ -1,4 +1,5 @@
 using Quay27.Application.Cashbook;
+using Quay27.Application.Reports;
 using Quay27.Domain.Entities;
 
 namespace Quay27.Application.Repositories;
@@ -6,6 +7,18 @@ namespace Quay27.Application.Repositories;
 public interface ICashbookRepository
 {
     Task<IReadOnlyList<CashbookEntryListItemDto>> ListEntriesAsync(CashbookListQuery query,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<EndOfDayCashflowRowDto>> ListForEndOfDayReportAsync(
+        EndOfDayReportQuery query,
+        DateTime fromUtc,
+        DateTime toUtc,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<EndOfDayCashflowAggregateRowDto>> AggregateForEndOfDayReportAsync(
+        EndOfDayReportQuery query,
+        DateTime fromUtc,
+        DateTime toUtc,
         CancellationToken cancellationToken = default);
 
     Task<CashbookSummaryDto> GetSummaryAsync(
