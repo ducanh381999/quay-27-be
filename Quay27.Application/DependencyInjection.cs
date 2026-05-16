@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<IUserAdminService, UserAdminService>();
         services.AddScoped<ICustomerColumnPermissionService, CustomerColumnPermissionService>();
         services.AddScoped<ISupplierPayableService, SupplierPayableService>();
+        services.AddScoped<ISupplierService, SupplierService>();
         services.AddScoped<ISupplierGroupService, SupplierGroupService>();
         services.AddScoped<IGoodsReceiptService, GoodsReceiptService>();
         services.AddScoped<IReturnReceiptService, ReturnReceiptService>();

@@ -54,6 +54,7 @@ public static class DependencyInjection
         services.AddScoped<ICustomerVersionRepository, CustomerVersionRepository>();
         services.AddScoped<ISheetPickerDraftStaffNameRepository, SheetPickerDraftStaffNameRepository>();
         services.AddScoped<ISupplierPayableRepository, SupplierPayableRepository>();
+        services.AddScoped<ISupplierRepository, SupplierRepository>();
         services.AddScoped<ISupplierGroupRepository, SupplierGroupRepository>();
         services.AddScoped<IGoodsReceiptRepository, GoodsReceiptRepository>();
         services.AddScoped<IReturnReceiptRepository, ReturnReceiptRepository>();
