@@ -67,6 +67,8 @@ public static class DependencyInjection
         services.AddScoped<IPaymentCategoryRepository, PaymentCategoryRepository>();
         services.AddScoped<ICashbookRepository, CashbookRepository>();
         services.AddScoped<IEndOfDayService, EndOfDayService>();
+        services.AddScoped<IEndOfDayReportService, EndOfDayReportService>();
+        services.AddSingleton<IExcelToPdfConverter, ExcelToPdfConverter>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<ICustomerGroupMembershipSyncService, CustomerGroupMembershipSyncService>();
         services.AddOptions<R2StorageOptions>()

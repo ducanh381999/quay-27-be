@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Quay27.Application.Orders;
+using Quay27.Application.Reports;
 using Quay27.Application.Repositories;
 using Quay27.Domain.Entities;
 using Quay27.Infrastructure.Persistence;
@@ -74,6 +75,54 @@ public sealed class SalesInvoiceRepository : ISalesInvoiceRepository
                 ReturnReferenceCode = x.ReturnReferenceCode,
                 CustomerCode = x.CustomerCode,
                 CustomerName = x.CustomerName,
+                SubtotalAmount = x.SubtotalAmount,
+                DiscountAmount = x.DiscountAmount,
+                PaidAmount = x.PaidAmount,
+            })
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<EndOfDaySalesRowDto>> ListForEndOfDayReportAsync(
+        EndOfDayReportQuery query,
+        DateTime fromUtc,
+        DateTime toUtc,
+        CancellationToken cancellationToken = default)
+    {
+        var q = _db.SalesInvoices.AsNoTracking()
+            .Where(x => x.CreatedAtUtc >= fromUtc && x.CreatedAtUtc <= toUtc);
+
+        if (!string.IsNullOrWhiteSpace(query.CustomerSearch))
+        {
+            var s = query.CustomerSearch.Trim();
+            q = q.Where(x =>
+                (x.CustomerCode != null && x.CustomerCode.Contains(s)) ||
+                (x.CustomerName != null && x.CustomerName.Contains(s)) ||
+                x.Code.Contains(s));
+        }
+
+        if (query.SellerUserId.HasValue)
+            q = q.Where(x => x.SellerUserId == query.SellerUserId.Value);
+        if (query.CreatedByUserId.HasValue)
+            q = q.Where(x => x.CreatedByUserId == query.CreatedByUserId.Value);
+        if (!string.IsNullOrWhiteSpace(query.PaymentMethod))
+            q = q.Where(x => x.PaymentMethod == query.PaymentMethod.Trim());
+        if (query.SaleChannelId.HasValue)
+            q = q.Where(x => x.SaleChannelId == query.SaleChannelId.Value);
+
+        return await (
+            from x in q
+            orderby x.CreatedAtUtc
+            join seller in _db.Users.AsNoTracking() on x.SellerUserId equals seller.Id into sellers
+            from seller in sellers.DefaultIfEmpty()
+            select new EndOfDaySalesRowDto
+            {
+                Code = x.Code,
+                CreatedAtUtc = x.CreatedAtUtc,
+                CustomerName = x.CustomerName,
+                SellerDisplayName = seller == null
+                    ? null
+                    : (string.IsNullOrWhiteSpace(seller.FullName) ? seller.Username : seller.FullName),
+                Quantity = x.Items.Sum(i => i.Quantity),
                 SubtotalAmount = x.SubtotalAmount,
                 DiscountAmount = x.DiscountAmount,
                 PaidAmount = x.PaidAmount,

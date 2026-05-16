@@ -1,4 +1,5 @@
 using Quay27.Application.Orders;
+using Quay27.Application.Reports;
 using Quay27.Domain.Entities;
 
 namespace Quay27.Application.Repositories;
@@ -6,6 +7,12 @@ namespace Quay27.Application.Repositories;
 public interface ISalesInvoiceRepository
 {
     Task<IReadOnlyList<SalesInvoiceListItemDto>> ListAsync(SalesInvoiceListQuery query,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<EndOfDaySalesRowDto>> ListForEndOfDayReportAsync(
+        EndOfDayReportQuery query,
+        DateTime fromUtc,
+        DateTime toUtc,
         CancellationToken cancellationToken = default);
 
     Task<string> GenerateNextCodeAsync(CancellationToken cancellationToken = default);

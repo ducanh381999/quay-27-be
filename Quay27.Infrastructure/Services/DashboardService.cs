@@ -102,61 +102,37 @@ public sealed class DashboardService : IDashboardService
         var range = DashboardDateRange.Resolve(preset, now);
         var (startUtc, endUtc) = DashboardDateRange.ToUtcHalfOpenInterval(range, now);
 
-        // EF cannot translate DashboardService.IsCancelled / SalesDashboardConstants.IsSalesReturn — use translatable predicates.
-        var statusMarkersLower = SalesDashboardConstants.SalesReturnStatusContainsMarkers
-            .Where(m => !string.IsNullOrEmpty(m))
-            .Select(m => m.ToLowerInvariant())
-            .ToList();
-        var noteMarkersLower = SalesDashboardConstants.SalesReturnNotesContainsMarkers
-            .Where(m => !string.IsNullOrEmpty(m))
-            .Select(m => m.ToLowerInvariant())
-            .ToList();
-
-        // Avoid `localList.Any(m => column.ToLower().Contains(m))` when marker lists are empty: some providers
-        // (e.g. EF InMemory in tests) do not translate that shape; with no markers it matches IsSalesReturn anyway.
-        var lineRows = statusMarkersLower.Count == 0 && noteMarkersLower.Count == 0
-            ? await (
-                from line in _db.CustomerInvoiceLines.AsNoTracking()
-                join c in _db.Customers.AsNoTracking() on line.CustomerId equals c.Id
-                where !c.IsDeleted
-                      && c.BillCreatedAt >= startUtc
-                      && c.BillCreatedAt < endUtc
-                      && c.BillCreatedAt > DateTime.MinValue
-                      && c.Notes.Trim() != SchemaConstants.CancelledInvoiceNotes
-                select new
-                {
-                    line.ProductId,
-                    line.ProductNameSnapshot,
-                    line.Amount,
-                    line.Quantity,
-                }).ToListAsync(cancellationToken)
-            : await (
-                from line in _db.CustomerInvoiceLines.AsNoTracking()
-                join c in _db.Customers.AsNoTracking() on line.CustomerId equals c.Id
-                where !c.IsDeleted
-                      && c.BillCreatedAt >= startUtc
-                      && c.BillCreatedAt < endUtc
-                      && c.BillCreatedAt > DateTime.MinValue
-                      && c.Notes.Trim() != SchemaConstants.CancelledInvoiceNotes
-                      && (statusMarkersLower.Count == 0 ||
-                          !statusMarkersLower.Any(m => c.Status.ToLower().Contains(m)))
-                      && (noteMarkersLower.Count == 0 ||
-                          !noteMarkersLower.Any(m => c.Notes.ToLower().Contains(m)))
-                select new
-                {
-                    line.ProductId,
-                    line.ProductNameSnapshot,
-                    line.Amount,
-                    line.Quantity,
-                }).ToListAsync(cancellationToken);
+        var lineRows = await (
+            from line in _db.SalesInvoiceItems.AsNoTracking()
+            join inv in _db.SalesInvoices.AsNoTracking() on line.SalesInvoiceId equals inv.Id
+            where inv.CreatedAtUtc >= startUtc
+                  && inv.CreatedAtUtc < endUtc
+                  && inv.Status.ToLower() != "cancelled"
+            select new
+            {
+                line.ProductId,
+                line.ProductCode,
+                line.ProductName,
+                line.LineTotal,
+                line.Quantity,
+            }).ToListAsync(cancellationToken);
 
         var list = lineRows
-            .GroupBy(x => new { x.ProductId, x.ProductNameSnapshot })
-            .Select(g => new
+            .GroupBy(x => x.ProductId)
+            .Select(g =>
             {
-                g.Key.ProductNameSnapshot,
-                Amount = g.Sum(x => x.Amount),
-                Qty = g.Sum(x => x.Quantity),
+                var sample = g.First();
+                var name = !string.IsNullOrWhiteSpace(sample.ProductName)
+                    ? sample.ProductName.Trim()
+                    : !string.IsNullOrWhiteSpace(sample.ProductCode)
+                        ? sample.ProductCode.Trim()
+                        : "(Hàng)";
+                return new
+                {
+                    Name = name,
+                    Amount = g.Sum(x => x.LineTotal),
+                    Qty = g.Sum(x => x.Quantity),
+                };
             })
             .ToList();
 
@@ -165,15 +141,11 @@ public sealed class DashboardService : IDashboardService
             DashboardProductMetric.Quantity => list
                 .OrderByDescending(x => x.Qty)
                 .Take(10)
-                .Select(x => new TopRankRowDto(
-                    string.IsNullOrWhiteSpace(x.ProductNameSnapshot) ? "(Hàng)" : x.ProductNameSnapshot,
-                    x.Qty)),
+                .Select(x => new TopRankRowDto(x.Name, x.Qty)),
             _ => list
                 .OrderByDescending(x => x.Amount)
                 .Take(10)
-                .Select(x => new TopRankRowDto(
-                    string.IsNullOrWhiteSpace(x.ProductNameSnapshot) ? "(Hàng)" : x.ProductNameSnapshot,
-                    x.Amount)),
+                .Select(x => new TopRankRowDto(x.Name, x.Amount)),
         };
 
         return ranked.ToList();
