@@ -703,6 +703,9 @@ public class ApplicationDbContext : DbContext
             e.HasOne(x => x.ReceivingAccount).WithMany().HasForeignKey(x => x.ReceivingAccountId)
                 .OnDelete(DeleteBehavior.SetNull);
             e.HasOne(x => x.SaleChannel).WithMany().HasForeignKey(x => x.SaleChannelId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.PurchaseOrder).WithMany(x => x.SalesInvoices).HasForeignKey(x => x.PurchaseOrderId)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(x => x.PurchaseOrderId);
         });
 
         modelBuilder.Entity<SalesInvoiceItem>(e =>

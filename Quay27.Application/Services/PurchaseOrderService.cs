@@ -55,6 +55,31 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         CancellationToken cancellationToken = default) =>
         _orders.ListAsync(query, cancellationToken);
 
+    public async Task<PurchaseOrderDetailDto> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        return await _orders.GetDetailAsync(id, cancellationToken)
+               ?? throw new NotFoundException("Không tìm thấy đặt hàng.");
+    }
+
+    public async Task<IReadOnlyList<PurchaseOrderLinkedInvoiceDto>> ListInvoicesAsync(Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        if (await _orders.GetByIdNoTrackingAsync(id, cancellationToken) is null)
+            throw new NotFoundException("Không tìm thấy đặt hàng.");
+        return await _orders.ListLinkedInvoicesAsync(id, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<PurchaseOrderCashbookRowDto>> ListCashbookEntriesAsync(Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        if (await _orders.GetByIdNoTrackingAsync(id, cancellationToken) is null)
+            throw new NotFoundException("Không tìm thấy đặt hàng.");
+        return await _orders.ListCashbookEntriesAsync(id, cancellationToken);
+    }
+
     public async Task<OrderCreatedDto> CreateAsync(CreatePurchaseOrderRequest request,
         CancellationToken cancellationToken = default)
     {

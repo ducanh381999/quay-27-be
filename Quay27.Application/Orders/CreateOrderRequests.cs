@@ -39,6 +39,8 @@ public sealed class CreatePurchaseOrderRequest
 
 public sealed class CreateSalesInvoiceRequest
 {
+    public Guid? PurchaseOrderId { get; set; }
+
     public Guid? CustomerProfileId { get; set; }
     public Guid? SellerUserId { get; set; }
     public Guid? SaleChannelId { get; set; }

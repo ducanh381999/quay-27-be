@@ -114,4 +114,142 @@ public sealed class PurchaseOrderRepository : IPurchaseOrderRepository
             .SumAsync(x => (int?)x.Quantity, cancellationToken);
         return sum ?? 0;
     }
+
+    public async Task<PurchaseOrderDetailDto?> GetDetailAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var order = await _db.PurchaseOrders.AsNoTracking()
+            .Include(x => x.Items)
+            .Include(x => x.CreatedByUser)
+            .Include(x => x.ReceivedByUser)
+            .Include(x => x.SellerUser)
+            .Include(x => x.SaleChannel)
+            .Include(x => x.PriceList)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (order is null)
+            return null;
+
+        var fulfilledByProduct = await (
+            from item in _db.SalesInvoiceItems.AsNoTracking()
+            join inv in _db.SalesInvoices.AsNoTracking() on item.SalesInvoiceId equals inv.Id
+            where inv.PurchaseOrderId == id
+            group item by item.ProductId
+            into g
+            select new { ProductId = g.Key, Qty = g.Sum(x => x.Quantity) })
+            .ToDictionaryAsync(x => x.ProductId, x => x.Qty, cancellationToken);
+
+        var primaryInvoice = await _db.SalesInvoices.AsNoTracking()
+            .Where(x => x.PurchaseOrderId == id)
+            .OrderByDescending(x => x.CreatedAtUtc)
+            .Select(x => new { x.Id, x.Code })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var lines = order.Items
+            .OrderBy(x => x.ProductCode)
+            .Select(line =>
+            {
+                fulfilledByProduct.TryGetValue(line.ProductId, out var fulfilled);
+                var gross = line.Quantity * line.UnitPrice;
+                var discount = gross > line.LineTotal ? gross - line.LineTotal : 0m;
+                return new PurchaseOrderLineDto(
+                    line.Id,
+                    line.ProductCode,
+                    line.ProductName,
+                    line.Quantity,
+                    fulfilled,
+                    line.UnitPrice,
+                    discount,
+                    line.UnitPrice,
+                    line.LineTotal,
+                    line.Note);
+            })
+            .ToList();
+
+        return new PurchaseOrderDetailDto(
+            order.Id,
+            order.Code,
+            order.Status,
+            order.CustomerCode,
+            order.CustomerName,
+            order.CreatedAtUtc,
+            UserDisplayName(order.CreatedByUser),
+            UserDisplayName(order.ReceivedByUser),
+            UserDisplayName(order.SellerUser),
+            order.SaleChannel?.Name,
+            order.PriceList?.Name,
+            primaryInvoice?.Id,
+            primaryInvoice?.Code,
+            FormatExpectedDelivery(order.DeliveryFromUtc, order.DeliveryToUtc),
+            order.Note,
+            order.SubtotalAmount,
+            order.DiscountAmount,
+            order.AmountDue,
+            order.AmountPaid,
+            "Chi nhánh trung tâm",
+            lines);
+    }
+
+    public async Task<IReadOnlyList<PurchaseOrderLinkedInvoiceDto>> ListLinkedInvoicesAsync(
+        Guid purchaseOrderId,
+        CancellationToken cancellationToken = default) =>
+        await (
+            from inv in _db.SalesInvoices.AsNoTracking()
+            where inv.PurchaseOrderId == purchaseOrderId
+            orderby inv.CreatedAtUtc descending
+            join u in _db.Users.AsNoTracking() on inv.CreatedByUserId equals u.Id into ug
+            from u in ug.DefaultIfEmpty()
+            select new PurchaseOrderLinkedInvoiceDto(
+                inv.Id,
+                inv.Code,
+                inv.CreatedAtUtc,
+                u != null
+                    ? (string.IsNullOrWhiteSpace(u.FullName) ? u.Username : u.FullName)
+                    : null,
+                inv.SubtotalAmount - inv.DiscountAmount,
+                inv.Status))
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<PurchaseOrderCashbookRowDto>> ListCashbookEntriesAsync(
+        Guid purchaseOrderId,
+        CancellationToken cancellationToken = default)
+    {
+        var invoiceIds = await _db.SalesInvoices.AsNoTracking()
+            .Where(x => x.PurchaseOrderId == purchaseOrderId)
+            .Select(x => x.Id)
+            .ToListAsync(cancellationToken);
+
+        return await (
+            from e in _db.CashbookEntries.AsNoTracking()
+            where (e.SourceKind == "PurchaseOrder" && e.SourceId == purchaseOrderId)
+                  || (e.SourceKind == "SalesInvoice" && e.SourceId.HasValue && invoiceIds.Contains(e.SourceId.Value))
+            orderby e.OccurredAtUtc descending
+            join u in _db.Users.AsNoTracking() on e.CreatedByUserId equals u.Id into ug
+            from u in ug.DefaultIfEmpty()
+            select new PurchaseOrderCashbookRowDto(
+                e.Id,
+                e.Code,
+                e.OccurredAtUtc,
+                u != null
+                    ? (string.IsNullOrWhiteSpace(u.FullName) ? u.Username : u.FullName)
+                    : null,
+                e.FundType,
+                e.Status,
+                e.Amount,
+                e.EntryType))
+            .ToListAsync(cancellationToken);
+    }
+
+    private static string? UserDisplayName(User? user) =>
+        user is null
+            ? null
+            : string.IsNullOrWhiteSpace(user.FullName) ? user.Username : user.FullName.Trim();
+
+    private static string? FormatExpectedDelivery(DateTime? from, DateTime? to)
+    {
+        if (!from.HasValue && !to.HasValue)
+            return null;
+        if (from.HasValue && to.HasValue && from.Value.Date != to.Value.Date)
+            return $"{from.Value:dd/MM/yyyy} – {to.Value:dd/MM/yyyy}";
+        var d = from ?? to;
+        return d?.ToString("dd/MM/yyyy");
+    }
 }

@@ -11,5 +11,13 @@ public interface ISalesInvoiceService
     Task<OrderCreatedDto> CreateAsync(CreateSalesInvoiceRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<SalesInvoiceDetailDto> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<SalesInvoiceCashbookRowDto>> ListCashbookEntriesAsync(Guid id,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<SalesInvoiceReturnRowDto>> ListReturnsAsync(Guid id,
+        CancellationToken cancellationToken = default);
+
     Task PatchStatusAsync(Guid id, PatchOrderStatusRequest request, CancellationToken cancellationToken = default);
 }

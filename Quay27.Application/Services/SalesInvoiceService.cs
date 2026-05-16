@@ -14,6 +14,7 @@ namespace Quay27.Application.Services;
 public sealed class SalesInvoiceService : ISalesInvoiceService
 {
     private readonly ISalesInvoiceRepository _invoices;
+    private readonly IPurchaseOrderRepository _purchaseOrders;
     private readonly IProductRepository _products;
     private readonly ICustomerProfileRepository _customers;
     private readonly IUserRepository _users;
@@ -28,6 +29,7 @@ public sealed class SalesInvoiceService : ISalesInvoiceService
 
     public SalesInvoiceService(
         ISalesInvoiceRepository invoices,
+        IPurchaseOrderRepository purchaseOrders,
         IProductRepository products,
         ICustomerProfileRepository customers,
         IUserRepository users,
@@ -41,6 +43,7 @@ public sealed class SalesInvoiceService : ISalesInvoiceService
         ICustomerService customerSheet)
     {
         _invoices = invoices;
+        _purchaseOrders = purchaseOrders;
         _products = products;
         _customers = customers;
         _users = users;
@@ -98,6 +101,13 @@ public sealed class SalesInvoiceService : ISalesInvoiceService
                 { new ValidationFailure(nameof(request.PriceListId), "Bảng giá không tồn tại.") });
         }
 
+        if (request.PurchaseOrderId.HasValue &&
+            await _purchaseOrders.GetByIdNoTrackingAsync(request.PurchaseOrderId.Value, cancellationToken) is null)
+        {
+            throw new ValidationException(new[]
+                { new ValidationFailure(nameof(request.PurchaseOrderId), "Đơn đặt hàng không tồn tại.") });
+        }
+
         var (paymentMethod, receivingAccountId) = await OrderReceivingAccountResolver.ResolveAsync(
             request.PaymentMethod,
             request.ReceivingAccountId,
@@ -130,6 +140,7 @@ public sealed class SalesInvoiceService : ISalesInvoiceService
             SellerUserId = request.SellerUserId,
             CreatedByUserId = _currentUser.UserId,
             SaleChannelId = request.SaleChannelId,
+            PurchaseOrderId = request.PurchaseOrderId,
             CustomerProfileId = customer?.Id,
             CustomerCode = customer?.CustomerCode,
             CustomerName = customer?.CustomerName,
@@ -177,6 +188,31 @@ public sealed class SalesInvoiceService : ISalesInvoiceService
                 CustomerSheetDateIso = sheetDateIso,
             };
         }, cancellationToken);
+    }
+
+    public async Task<SalesInvoiceDetailDto> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        return await _invoices.GetDetailAsync(id, cancellationToken)
+               ?? throw new NotFoundException("Không tìm thấy hóa đơn.");
+    }
+
+    public async Task<IReadOnlyList<SalesInvoiceCashbookRowDto>> ListCashbookEntriesAsync(Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        if (await _invoices.GetByIdNoTrackingAsync(id, cancellationToken) is null)
+            throw new NotFoundException("Không tìm thấy hóa đơn.");
+        return await _invoices.ListCashbookEntriesAsync(id, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<SalesInvoiceReturnRowDto>> ListReturnsAsync(Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        if (await _invoices.GetByIdNoTrackingAsync(id, cancellationToken) is null)
+            throw new NotFoundException("Không tìm thấy hóa đơn.");
+        return await _invoices.ListReturnsAsync(id, cancellationToken);
     }
 
     public async Task PatchStatusAsync(Guid id, PatchOrderStatusRequest request,

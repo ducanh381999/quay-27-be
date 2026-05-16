@@ -53,4 +53,5 @@ public sealed class PurchaseOrder
     public ReceivingAccount? ReceivingAccount { get; set; }
 
     public ICollection<PurchaseOrderItem> Items { get; set; } = new List<PurchaseOrderItem>();
+    public ICollection<SalesInvoice> SalesInvoices { get; set; } = new List<SalesInvoice>();
 }

@@ -16,6 +16,14 @@ public interface IPurchaseOrderRepository
 
     Task<PurchaseOrder?> GetByIdNoTrackingAsync(Guid id, CancellationToken cancellationToken = default);
 
+    Task<PurchaseOrderDetailDto?> GetDetailAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<PurchaseOrderLinkedInvoiceDto>> ListLinkedInvoicesAsync(Guid purchaseOrderId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<PurchaseOrderCashbookRowDto>> ListCashbookEntriesAsync(Guid purchaseOrderId,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Sum of line quantities on non-terminal purchase orders for this product (draft/confirmed/shipping).</summary>
     Task<int> SumReservedQuantityForProductInOpenOrdersAsync(Guid productId,
         CancellationToken cancellationToken = default);

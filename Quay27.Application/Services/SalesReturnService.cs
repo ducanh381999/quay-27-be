@@ -359,6 +359,22 @@ public sealed class SalesReturnService : ISalesReturnService
         return (serverSubtotal, productLookup);
     }
 
+    public async Task<SalesReturnDetailDto> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        return await _returns.GetDetailAsync(id, cancellationToken)
+               ?? throw new NotFoundException("Không tìm thấy phiếu trả hàng.");
+    }
+
+    public async Task<IReadOnlyList<SalesReturnCashbookRowDto>> ListCashbookEntriesAsync(Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureAuthenticated();
+        if (await _returns.GetByIdNoTrackingAsync(id, cancellationToken) is null)
+            throw new NotFoundException("Không tìm thấy phiếu trả hàng.");
+        return await _returns.ListCashbookEntriesAsync(id, cancellationToken);
+    }
+
     private void EnsureAuthenticated()
     {
         if (!_currentUser.IsAuthenticated || _currentUser.UserId is null)

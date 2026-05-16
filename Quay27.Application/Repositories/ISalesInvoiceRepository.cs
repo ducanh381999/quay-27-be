@@ -15,4 +15,12 @@ public interface ISalesInvoiceRepository
     Task<SalesInvoice?> GetTrackedByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<SalesInvoice?> GetByIdNoTrackingAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<SalesInvoiceDetailDto?> GetDetailAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<SalesInvoiceCashbookRowDto>> ListCashbookEntriesAsync(Guid invoiceId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<SalesInvoiceReturnRowDto>> ListReturnsAsync(Guid invoiceId,
+        CancellationToken cancellationToken = default);
 }

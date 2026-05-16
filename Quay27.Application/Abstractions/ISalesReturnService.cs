@@ -12,4 +12,9 @@ public interface ISalesReturnService
         CancellationToken cancellationToken = default);
 
     Task PatchStatusAsync(Guid id, PatchOrderStatusRequest request, CancellationToken cancellationToken = default);
+
+    Task<SalesReturnDetailDto> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<SalesReturnCashbookRowDto>> ListCashbookEntriesAsync(Guid id,
+        CancellationToken cancellationToken = default);
 }
