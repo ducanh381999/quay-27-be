@@ -11,5 +11,13 @@ public interface IPurchaseOrderService
     Task<OrderCreatedDto> CreateAsync(CreatePurchaseOrderRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<PurchaseOrderDetailDto> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<PurchaseOrderLinkedInvoiceDto>> ListInvoicesAsync(Guid id,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<PurchaseOrderCashbookRowDto>> ListCashbookEntriesAsync(Guid id,
+        CancellationToken cancellationToken = default);
+
     Task PatchStatusAsync(Guid id, PatchOrderStatusRequest request, CancellationToken cancellationToken = default);
 }

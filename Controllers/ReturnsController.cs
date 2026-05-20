@@ -53,6 +53,26 @@ public sealed class ReturnsController : ControllerBase
         return StatusCode(StatusCodes.Status201Created, created);
     }
 
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(SalesReturnDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<SalesReturnDetailDto>> GetById(Guid id, CancellationToken cancellationToken)
+    {
+        var detail = await _service.GetByIdAsync(id, cancellationToken);
+        return Ok(detail);
+    }
+
+    [HttpGet("{id:guid}/cashbook-entries")]
+    [ProducesResponseType(typeof(IReadOnlyList<SalesReturnCashbookRowDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<SalesReturnCashbookRowDto>>> ListCashbookEntries(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var items = await _service.ListCashbookEntriesAsync(id, cancellationToken);
+        return Ok(items);
+    }
+
     [HttpPatch("{id:guid}/status")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> PatchStatus(Guid id, [FromBody] PatchOrderStatusRequest request,

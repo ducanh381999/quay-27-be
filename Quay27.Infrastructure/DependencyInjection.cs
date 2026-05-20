@@ -54,6 +54,7 @@ public static class DependencyInjection
         services.AddScoped<ICustomerVersionRepository, CustomerVersionRepository>();
         services.AddScoped<ISheetPickerDraftStaffNameRepository, SheetPickerDraftStaffNameRepository>();
         services.AddScoped<ISupplierPayableRepository, SupplierPayableRepository>();
+        services.AddScoped<ISupplierRepository, SupplierRepository>();
         services.AddScoped<ISupplierGroupRepository, SupplierGroupRepository>();
         services.AddScoped<IGoodsReceiptRepository, GoodsReceiptRepository>();
         services.AddScoped<IReturnReceiptRepository, ReturnReceiptRepository>();
@@ -66,6 +67,7 @@ public static class DependencyInjection
         services.AddScoped<IPaymentCategoryRepository, PaymentCategoryRepository>();
         services.AddScoped<ICashbookRepository, CashbookRepository>();
         services.AddScoped<IEndOfDayService, EndOfDayService>();
+        services.AddScoped<IReportsService, ReportsService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<ICustomerGroupMembershipSyncService, CustomerGroupMembershipSyncService>();
         services.AddOptions<R2StorageOptions>()

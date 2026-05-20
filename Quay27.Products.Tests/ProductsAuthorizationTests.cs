@@ -92,6 +92,17 @@ public class ProductsAuthorizationTests
 
         public Task<int> SumReservedQuantityForProductInOpenOrdersAsync(Guid productId,
             CancellationToken cancellationToken = default) => Task.FromResult(0);
+
+        public Task<PurchaseOrderDetailDto?> GetDetailAsync(Guid id, CancellationToken cancellationToken = default) =>
+            Task.FromResult<PurchaseOrderDetailDto?>(null);
+
+        public Task<IReadOnlyList<PurchaseOrderLinkedInvoiceDto>> ListLinkedInvoicesAsync(Guid purchaseOrderId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult((IReadOnlyList<PurchaseOrderLinkedInvoiceDto>)Array.Empty<PurchaseOrderLinkedInvoiceDto>());
+
+        public Task<IReadOnlyList<PurchaseOrderCashbookRowDto>> ListCashbookEntriesAsync(Guid purchaseOrderId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult((IReadOnlyList<PurchaseOrderCashbookRowDto>)Array.Empty<PurchaseOrderCashbookRowDto>());
     }
 
     private sealed class FakeCurrentUser(bool isAuthenticated) : ICurrentUser

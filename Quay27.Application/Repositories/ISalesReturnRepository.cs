@@ -15,4 +15,9 @@ public interface ISalesReturnRepository
     Task<SalesReturn?> GetTrackedByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<SalesReturn?> GetByIdNoTrackingAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<SalesReturnDetailDto?> GetDetailAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<SalesReturnCashbookRowDto>> ListCashbookEntriesAsync(Guid returnId,
+        CancellationToken cancellationToken = default);
 }

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Quay27.Application.Cashbook;
 using Quay27.Application.Common;
+using Quay27.Application.Reports;
 using Quay27.Application.Repositories;
 using Quay27.Domain.Entities;
 using Quay27.Infrastructure.Persistence;
@@ -40,6 +41,109 @@ public sealed class CashbookRepository : ICashbookRepository
                 x.SourceKind))
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<EndOfDayCashflowRowDto>> ListForEndOfDayReportAsync(
+        EndOfDayReportQuery query,
+        DateTime fromUtc,
+        DateTime toUtc,
+        CancellationToken cancellationToken = default)
+    {
+        var listQuery = ToEndOfDayCashbookListQuery(query, fromUtc, toUtc);
+        var q = ApplyFilters(_db.CashbookEntries.AsNoTracking(), listQuery, inPeriod: true);
+
+        return await (
+                from x in q
+                orderby x.OccurredAtUtc, x.Code
+                join staff in _db.Users.AsNoTracking() on x.StaffUserId equals staff.Id into staffJoin
+                from staff in staffJoin.DefaultIfEmpty()
+                join cat in _db.PaymentCategories.AsNoTracking() on x.PaymentCategoryId equals cat.Id into catJoin
+                from cat in catJoin.DefaultIfEmpty()
+                join inv in _db.SalesInvoices.AsNoTracking() on x.SourceId equals inv.Id into invJoin
+                from inv in invJoin.DefaultIfEmpty()
+                select new EndOfDayCashflowRowDto
+                {
+                    Code = x.Code,
+                    OccurredAtUtc = x.OccurredAtUtc,
+                    EntryType = x.EntryType,
+                    CategoryName = cat != null ? cat.Name : null,
+                    StaffDisplayName = staff == null
+                        ? null
+                        : (string.IsNullOrWhiteSpace(staff.FullName) ? staff.Username : staff.FullName),
+                    CounterpartyName = x.CounterpartyDisplayName,
+                    Amount = x.Amount,
+                    SourceCode = x.SourceKind == "SalesInvoice" && inv != null ? inv.Code : null,
+                })
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<EndOfDayCashflowAggregateRowDto>> AggregateForEndOfDayReportAsync(
+        EndOfDayReportQuery query,
+        DateTime fromUtc,
+        DateTime toUtc,
+        CancellationToken cancellationToken = default)
+    {
+        var listQuery = ToEndOfDayCashbookListQuery(query, fromUtc, toUtc);
+        var q = ApplyFilters(_db.CashbookEntries.AsNoTracking(), listQuery, inPeriod: true);
+
+        var rows = await q
+            .Select(x => new { x.EntryType, x.FundType, x.Amount })
+            .ToListAsync(cancellationToken);
+
+        static (decimal cash, decimal transfer, decimal card) SumByFund(
+            IEnumerable<(string EntryType, string FundType, decimal Amount)> items,
+            string entryType)
+        {
+            decimal cash = 0, transfer = 0, card = 0;
+            foreach (var i in items.Where(x => x.EntryType == entryType))
+            {
+                switch (i.FundType)
+                {
+                    case "cash":
+                        cash += i.Amount;
+                        break;
+                    case "bank":
+                        transfer += i.Amount;
+                        break;
+                    case "ewallet":
+                        card += i.Amount;
+                        break;
+                }
+            }
+
+            return (MoneyMath.Round(cash), MoneyMath.Round(transfer), MoneyMath.Round(card));
+        }
+
+        var mapped = rows.Select(x => (x.EntryType, x.FundType, x.Amount)).ToList();
+        var (thuCash, thuTransfer, thuCard) = SumByFund(mapped, "Receipt");
+        var (chiCash, chiTransfer, chiCard) = SumByFund(mapped, "Payment");
+
+        return new List<EndOfDayCashflowAggregateRowDto>
+        {
+            new() { Label = "Thu", CashAmount = thuCash, TransferAmount = thuTransfer, CardAmount = thuCard },
+            new() { Label = "Chi", CashAmount = chiCash, TransferAmount = chiTransfer, CardAmount = chiCard },
+        };
+    }
+
+    private static CashbookListQuery ToEndOfDayCashbookListQuery(
+        EndOfDayReportQuery query,
+        DateTime fromUtc,
+        DateTime toUtc) =>
+        new(
+            fromUtc,
+            toUtc,
+            null,
+            null,
+            null,
+            new[] { "paid" },
+            null,
+            query.CreatedByUserId,
+            query.SellerUserId,
+            null,
+            query.CustomerSearch,
+            null,
+            null,
+            1,
+            50_000);
 
     public async Task<CashbookSummaryDto> GetSummaryAsync(
         DateTime? fromUtc,

@@ -49,6 +49,37 @@ public sealed class PurchaseOrdersController : ControllerBase
         return Ok(items);
     }
 
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(PurchaseOrderDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<PurchaseOrderDetailDto>> GetById(Guid id, CancellationToken cancellationToken)
+    {
+        var detail = await _service.GetByIdAsync(id, cancellationToken);
+        return Ok(detail);
+    }
+
+    [HttpGet("{id:guid}/invoices")]
+    [ProducesResponseType(typeof(IReadOnlyList<PurchaseOrderLinkedInvoiceDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<PurchaseOrderLinkedInvoiceDto>>> ListInvoices(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var items = await _service.ListInvoicesAsync(id, cancellationToken);
+        return Ok(items);
+    }
+
+    [HttpGet("{id:guid}/cashbook-entries")]
+    [ProducesResponseType(typeof(IReadOnlyList<PurchaseOrderCashbookRowDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<PurchaseOrderCashbookRowDto>>> ListCashbookEntries(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var items = await _service.ListCashbookEntriesAsync(id, cancellationToken);
+        return Ok(items);
+    }
+
     [HttpPost]
     [ProducesResponseType(typeof(OrderCreatedDto), StatusCodes.Status201Created)]
     public async Task<ActionResult<OrderCreatedDto>> Create(

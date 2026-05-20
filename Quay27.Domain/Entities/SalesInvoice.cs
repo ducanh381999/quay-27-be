@@ -54,5 +54,8 @@ public sealed class SalesInvoice
     public Guid? SaleChannelId { get; set; }
     public SaleChannel? SaleChannel { get; set; }
 
+    public Guid? PurchaseOrderId { get; set; }
+    public PurchaseOrder? PurchaseOrder { get; set; }
+
     public ICollection<SalesInvoiceItem> Items { get; set; } = new List<SalesInvoiceItem>();
 }
