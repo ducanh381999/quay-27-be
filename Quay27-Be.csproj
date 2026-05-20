@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -8,10 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Quay27.Application\**\*.cs" />
+    <Compile Remove="Quay27.Application\**" />
     <Compile Remove="Quay27.Domain\**\*.cs" />
     <Compile Remove="Quay27.Infrastructure\**\*.cs" />
     <Compile Remove="Quay27.Products.Tests\**\*.cs" />
+    <Content Remove="Quay27.Application\**" />
+    <EmbeddedResource Remove="Quay27.Application\**" />
+    <None Remove="Quay27.Application\**" />
   </ItemGroup>
 
   <ItemGroup>
