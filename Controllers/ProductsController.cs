@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Quay27.Application.Abstractions;
 using Quay27.Application.Products;
+using System.Security.Claims;
 
 namespace Quay27_Be.Controllers;
 
@@ -11,9 +12,20 @@ namespace Quay27_Be.Controllers;
 [Route("api/[controller]")]
 public class ProductsController : ControllerBase
 {
+    public sealed class ImportProductsExcelForm
+    {
+        public IFormFile? File { get; set; }
+        public string DuplicateCodeConflictAction { get; set; } = ProductImportConflictAction.Error;
+        public string DuplicateBarcodeConflictAction { get; set; } = ProductImportConflictAction.Error;
+        public bool UpdateStock { get; set; }
+        public bool UpdateCostPrice { get; set; }
+        public bool UpdateDescription { get; set; }
+    }
+
     public sealed class ImportPriceListForm
     {
         public IFormFile? File { get; set; }
+        public List<Guid> SelectedPriceListIds { get; set; } = [];
     }
 
     private readonly IProductService _service;
@@ -227,11 +239,64 @@ public class ProductsController : ControllerBase
         return Ok();
     }
 
+    [HttpGet("import/template")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> DownloadProductsImportTemplate(CancellationToken cancellationToken)
+    {
+        var bytes = await _service.DownloadProductsImportTemplateAsync(cancellationToken);
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "MauFileSanPham.xlsx");
+    }
+
+    [HttpPost("import-excel")]
+    [ProducesResponseType(typeof(ImportProductsExcelResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [RequestSizeLimit(20 * 1024 * 1024)]
+    public async Task<ActionResult<ImportProductsExcelResult>> ImportProductsExcel(
+        [FromForm] ImportProductsExcelForm form,
+        CancellationToken cancellationToken)
+    {
+        if (form.File is null || form.File.Length == 0)
+            return BadRequest(new { title = "Invalid file", detail = "Vui lòng chọn file Excel hợp lệ." });
+
+        await using var ms = new MemoryStream();
+        await form.File.CopyToAsync(ms, cancellationToken);
+        var result = await _service.ImportProductsExcelAsync(new ImportProductsExcelRequest
+        {
+            FileBytes = ms.ToArray(),
+            FileName = form.File.FileName,
+            DuplicateCodeConflictAction = form.DuplicateCodeConflictAction,
+            DuplicateBarcodeConflictAction = form.DuplicateBarcodeConflictAction,
+            UpdateStock = form.UpdateStock,
+            UpdateCostPrice = form.UpdateCostPrice,
+            UpdateDescription = form.UpdateDescription
+        }, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("export")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ExportProducts(
+        [FromBody] ExportProductsExcelRequest request,
+        CancellationToken cancellationToken)
+    {
+        var bytes = await _service.ExportProductsExcelAsync(request, cancellationToken);
+        if (bytes is null || bytes.Length == 0)
+            return NotFound(new { title = "No export data", detail = "Không có dữ liệu để xuất file hàng hóa." });
+
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"HangHoa_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+    }
+
     [HttpGet("price-lists/import/template")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DownloadPriceListImportTemplate(CancellationToken cancellationToken)
     {
+        if (!CanManagePriceListActions())
+            return Forbid();
+
         var templatePath = Path.Combine(_environment.ContentRootPath, "Templates", "MauFileBangGia.xlsx");
         if (!System.IO.File.Exists(templatePath))
             return NotFound(new { title = "Template not found", detail = "Không tìm thấy file template bảng giá." });
@@ -256,7 +321,8 @@ public class ProductsController : ControllerBase
         var result = await _service.ImportPriceListAsync(new PriceListImportRequest
         {
             FileBytes = ms.ToArray(),
-            FileName = form.File.FileName
+            FileName = form.File.FileName,
+            SelectedPriceListIds = form.SelectedPriceListIds
         }, cancellationToken);
         return Ok(result);
     }
@@ -291,5 +357,19 @@ public class ProductsController : ControllerBase
             return NotFound(new { title = "No export data", detail = "Không có dữ liệu để xuất file bảng giá." });
 
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"BangGia_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+    }
+
+    private bool CanManagePriceListActions()
+    {
+        if (User.IsInRole("admin") || User.IsInRole("product_manager") || User.IsInRole("price_settings_manager"))
+            return true;
+
+        var roleValues = User.Claims
+            .Where(x => x.Type is ClaimTypes.Role or "role" or "roles")
+            .Select(x => x.Value);
+        return roleValues.Any(role =>
+            role.Equals("admin", StringComparison.OrdinalIgnoreCase)
+            || role.Equals("product_manager", StringComparison.OrdinalIgnoreCase)
+            || role.Equals("price_settings_manager", StringComparison.OrdinalIgnoreCase));
     }
 }

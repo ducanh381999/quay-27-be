@@ -23,6 +23,15 @@ public class ProductsAuthorizationTests
             new NoopUnitOfWork(),
             NullLogger<ProductService>.Instance);
 
+        await Assert.ThrowsAsync<ForbiddenException>(() => service.ImportProductsExcelAsync(new ImportProductsExcelRequest
+        {
+            FileBytes = [1],
+            FileName = "MauFileSanPham.xlsx"
+        }));
+        await Assert.ThrowsAsync<ForbiddenException>(() => service.ExportProductsExcelAsync(new ExportProductsExcelRequest
+        {
+            Columns = [new ExportProductsExcelColumn { Key = "code", HeaderName = "Mã hàng" }]
+        }));
         await Assert.ThrowsAsync<ForbiddenException>(() => service.ExportPriceListAsync(new()));
     }
 

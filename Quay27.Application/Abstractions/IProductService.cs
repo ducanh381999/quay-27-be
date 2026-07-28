@@ -23,8 +23,11 @@ public interface IProductService
     Task AddAllProductsToPriceListAsync(Guid priceListId, bool confirmed, CancellationToken cancellationToken = default);
     Task AddProductsByGroupsToPriceListAsync(Guid priceListId, AddProductsByGroupsRequest request, CancellationToken cancellationToken = default);
     Task ApplyPriceFormulaAsync(Guid priceListId, ApplyPriceFormulaRequest request, CancellationToken cancellationToken = default);
+    Task<ImportProductsExcelResult> ImportProductsExcelAsync(ImportProductsExcelRequest request, CancellationToken cancellationToken = default);
+    Task<byte[]?> ExportProductsExcelAsync(ExportProductsExcelRequest request, CancellationToken cancellationToken = default);
     Task<PriceListImportResult> ImportPriceListAsync(PriceListImportRequest request, CancellationToken cancellationToken = default);
     Task<byte[]?> ExportPriceListAsync(PriceListItemsQuery query, CancellationToken cancellationToken = default);
+    Task<byte[]> DownloadProductsImportTemplateAsync(CancellationToken cancellationToken = default);
     Task<ProductOrderEntryStockResponse> GetOrderEntryStockAsync(Guid productId,
         CancellationToken cancellationToken = default);
 }

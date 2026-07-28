@@ -8,11 +8,13 @@ public class ProductServicePriceListTests
         var query = new Quay27.Application.Products.PriceListItemsQuery
         {
             PriceListIds = [Guid.NewGuid()],
+            Stock = "under_stock_limit",
             PriceOperator = "gte",
             ComparePrice = "costPrice",
             CompareValue = 0
         };
 
+        Assert.Equal("under_stock_limit", query.Stock);
         Assert.Equal("gte", query.PriceOperator);
         Assert.Equal("costPrice", query.ComparePrice);
     }

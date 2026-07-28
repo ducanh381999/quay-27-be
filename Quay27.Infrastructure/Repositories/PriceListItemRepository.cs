@@ -62,6 +62,10 @@ public class PriceListItemRepository : IPriceListItemRepository
             query = query.Where(x => x.Product!.Stock > 0);
         else if (stock == "out_of_stock")
             query = query.Where(x => x.Product!.Stock <= 0);
+        else if (stock == "under_stock_limit")
+            query = query.Where(x => x.Product!.MinStock.HasValue && x.Product.Stock < x.Product.MinStock.Value);
+        else if (stock == "over_stock_limit")
+            query = query.Where(x => x.Product!.MaxStock.HasValue && x.Product.Stock > x.Product.MaxStock.Value);
 
         return await query.ToListAsync(cancellationToken);
     }

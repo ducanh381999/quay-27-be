@@ -92,6 +92,7 @@ public sealed class PriceListImportRequest
 {
     public byte[] FileBytes { get; set; } = Array.Empty<byte>();
     public string FileName { get; set; } = string.Empty;
+    public IReadOnlyList<Guid> SelectedPriceListIds { get; set; } = Array.Empty<Guid>();
 }
 
 public sealed class PriceListImportResult
