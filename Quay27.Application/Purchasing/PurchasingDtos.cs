@@ -30,7 +30,8 @@ public sealed record CreateGoodsReceiptRequest(
     decimal PaidAmount,
     string? Notes,
     IReadOnlyList<ReceiptLineInput> Lines,
-    IReadOnlyList<PaymentAllocationInput>? PaymentAllocations);
+    IReadOnlyList<PaymentAllocationInput>? PaymentAllocations,
+    Guid? ImportOrderId = null);
 
 public sealed record CreateReturnReceiptRequest(
     Guid? SupplierId,
@@ -181,3 +182,82 @@ public sealed record ReceivingAccountDto(
     string BankName,
     bool IsActive,
     string? ProviderCode);
+
+public sealed record ImportOrderLineDto(
+    Guid Id,
+    Guid ProductId,
+    string ProductCode,
+    string ProductName,
+    string Unit,
+    decimal Quantity,
+    decimal QuantityReceived,
+    decimal UnitPrice,
+    decimal Discount,
+    decimal LineTotal,
+    string? Note);
+
+public sealed record ImportOrderListItemDto(
+    Guid Id,
+    string Code,
+    DateTime CreatedAtUtc,
+    Guid? SupplierId,
+    string? SupplierName,
+    DateTime? ExpectedReceiptDate,
+    int? WaitingDays,
+    decimal AmountDue,
+    string Status,
+    string BranchLabel);
+
+public sealed record ImportOrderDetailDto(
+    Guid Id,
+    string Code,
+    string Status,
+    Guid? SupplierId,
+    string? SupplierCode,
+    string? SupplierName,
+    DateTime CreatedAtUtc,
+    string? CreatedByDisplayName,
+    string? OrderedByDisplayName,
+    DateTime? ExpectedReceiptDate,
+    string? Note,
+    decimal SubtotalAmount,
+    decimal DiscountAmount,
+    decimal AmountDue,
+    decimal AmountPaid,
+    string BranchLabel,
+    IReadOnlyList<ImportOrderLineDto> Lines);
+
+public sealed record CreateImportOrderRequest(
+    Guid? SupplierId,
+    string? Status,
+    DateTime? ExpectedReceiptDate,
+    decimal Discount,
+    decimal PaidAmount,
+    string? Notes,
+    IReadOnlyList<ReceiptLineInput> Lines);
+
+public sealed record ImportOrderListQuery(
+    string? Search,
+    IReadOnlyList<string>? Statuses,
+    DateTime? From,
+    DateTime? To,
+    string? CreatedBy = null,
+    string? OrderedBy = null);
+
+public sealed record ImportOrderSuggestRequest(
+    Guid? SupplierId,
+    Guid? GroupId,
+    string StockMode,
+    string QtyMode,
+    int SoldDays = 30);
+
+public sealed record ImportOrderSuggestLineDto(
+    Guid ProductId,
+    string ProductCode,
+    string ProductName,
+    string Unit,
+    decimal Quantity,
+    decimal UnitPrice);
+
+public sealed record ImportOrderSuggestResult(
+    IReadOnlyList<ImportOrderSuggestLineDto> Lines);

@@ -10,6 +10,7 @@ namespace Quay27.Application.Services;
 public class GoodsReceiptService : IGoodsReceiptService
 {
     private readonly IGoodsReceiptRepository _receipts;
+    private readonly IImportOrderRepository _importOrders;
     private readonly IProductRepository _products;
     private readonly ISupplierRepository _suppliers;
     private readonly IReceivingAccountRepository _receivingAccounts;
@@ -20,6 +21,7 @@ public class GoodsReceiptService : IGoodsReceiptService
 
     public GoodsReceiptService(
         IGoodsReceiptRepository receipts,
+        IImportOrderRepository importOrders,
         IProductRepository products,
         ISupplierRepository suppliers,
         IReceivingAccountRepository receivingAccounts,
@@ -29,6 +31,7 @@ public class GoodsReceiptService : IGoodsReceiptService
         ILogger<GoodsReceiptService> logger)
     {
         _receipts = receipts;
+        _importOrders = importOrders;
         _products = products;
         _suppliers = suppliers;
         _receivingAccounts = receivingAccounts;
@@ -220,6 +223,7 @@ public class GoodsReceiptService : IGoodsReceiptService
 
         entity.SupplierId = request.SupplierId;
         entity.Supplier = newSupplier;
+        entity.ImportOrderId = request.ImportOrderId;
         entity.Status = string.IsNullOrWhiteSpace(request.Status) ? "received" : request.Status.Trim();
         entity.ReceiptDate = receiptDate;
         entity.Subtotal = subtotal;
@@ -275,6 +279,35 @@ public class GoodsReceiptService : IGoodsReceiptService
         await PurchasingReceiptStockHelper.ReconcileGoodsReceiptStockAsync(
             _products, previousStatus, entity, previousLineQuantities, cancellationToken);
         await _cashbookSync.SyncGoodsReceiptSupplierPaymentsAsync(entity, previousPaymentAllocationIds, cancellationToken);
+        await SyncImportOrderReceivedQuantitiesAsync(entity, cancellationToken);
+    }
+
+    private async Task SyncImportOrderReceivedQuantitiesAsync(
+        GoodsReceipt entity,
+        CancellationToken cancellationToken)
+    {
+        if (!entity.ImportOrderId.HasValue) return;
+        if (!string.Equals(entity.Status?.Trim(), "received", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var order = await _importOrders.GetTrackedAsync(entity.ImportOrderId.Value, cancellationToken);
+        if (order is null) return;
+
+        var receivedByProduct = entity.Lines
+            .GroupBy(l => l.ProductId)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.Quantity));
+
+        foreach (var line in order.Lines)
+        {
+            if (!receivedByProduct.TryGetValue(line.ProductId, out var qty)) continue;
+            // Phase 1: set from this receipt (one GR per PDN typical). Multi-GR accumulate later.
+            line.QuantityReceived = Math.Min(line.Quantity, Math.Max(0m, qty));
+        }
+
+        if (order.Lines.Count > 0 && order.Lines.All(l => l.QuantityReceived >= l.Quantity))
+            order.Status = "fully_received";
+        else if (order.Lines.Any(l => l.QuantityReceived > 0))
+            order.Status = "partial_received";
     }
 
     private static GoodsReceiptDto Map(GoodsReceipt entity)
