@@ -4,23 +4,63 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
-  deploy:
+  build-push-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: SSH Deploy Backend
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/ducanh381999/quay-27-be:latest
+            ghcr.io/ducanh381999/quay-27-be:${{ github.sha }}
+
+      - name: SSH pull and up on VPS
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 37244
+          envs: GHCR_TOKEN,GHCR_USER
           script: |
-            cd /opt/quay27/quay-27-be
-            git pull origin master
-
+            set -e
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             cd /opt/quay27
-            docker compose build quay27-be
-            docker compose up -d quay27-be
+            printf '%s\n' \
+              'services:' \
+              '  quay27-fe:' \
+              '    image: ghcr.io/ducanh381999/quay-27:latest' \
+              '    pull_policy: always' \
+              '  quay27-be:' \
+              '    image: ghcr.io/ducanh381999/quay-27-be:latest' \
+              '    pull_policy: always' \
+              > docker-compose.ghcr.yml
+            docker compose -f docker-compose.yml -f docker-compose.ghcr.yml pull quay27-be
+            docker compose -f docker-compose.yml -f docker-compose.ghcr.yml up -d --no-build quay27-be
+            docker compose -f docker-compose.yml -f docker-compose.ghcr.yml ps quay27-be
