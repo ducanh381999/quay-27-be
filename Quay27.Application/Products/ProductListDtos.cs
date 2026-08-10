@@ -116,6 +116,7 @@ public sealed class ProductQuery
 {
     public string? Search { get; set; }
     public string? GroupId { get; set; }
+    public IReadOnlyList<Guid>? GroupIds { get; set; }
     public string? Stock { get; set; }
     public string? DirectSale { get; set; }
     public string? Status { get; set; }
@@ -141,6 +142,7 @@ public sealed class ProductGroupTreeDto
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = "";
+    public int ProductCount { get; set; }
     public IReadOnlyList<ProductGroupTreeDto> Children { get; set; } = Array.Empty<ProductGroupTreeDto>();
 }
 

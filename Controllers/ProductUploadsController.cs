@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Quay27.Application.Abstractions;
 using Quay27.Application.Products;
+using Quay27.Infrastructure.Storage;
 
 namespace Quay27_Be.Controllers;
 
@@ -10,6 +11,8 @@ namespace Quay27_Be.Controllers;
 [Route("api/products/uploads")]
 public class ProductUploadsController : ControllerBase
 {
+    private const long MaxUploadBytes = R2StorageOptions.DefaultMaxFileSizeBytes;
+
     private readonly IProductUploadService _uploadService;
 
     public ProductUploadsController(IProductUploadService uploadService)
@@ -18,6 +21,8 @@ public class ProductUploadsController : ControllerBase
     }
 
     [HttpPost("images")]
+    [RequestSizeLimit(MaxUploadBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = MaxUploadBytes)]
     [ProducesResponseType(typeof(UploadedImageAssetResponse), StatusCodes.Status201Created)]
     public async Task<ActionResult<UploadedImageAssetResponse>> UploadImage(
         IFormFile? file,

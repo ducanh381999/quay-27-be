@@ -42,6 +42,7 @@ public class ProductsController : ControllerBase
     public async Task<ActionResult<ProductListResponse>> List(
         [FromQuery] string? search,
         [FromQuery] string? groupId,
+        [FromQuery] List<Guid>? groupIds,
         [FromQuery] string? stock,
         [FromQuery] string? directSale,
         [FromQuery] string? status,
@@ -58,6 +59,7 @@ public class ProductsController : ControllerBase
         {
             Search = search,
             GroupId = groupId,
+            GroupIds = groupIds,
             Stock = stock,
             DirectSale = directSale,
             Status = status,
@@ -241,9 +243,14 @@ public class ProductsController : ControllerBase
 
     [HttpGet("import/template")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DownloadProductsImportTemplate(CancellationToken cancellationToken)
     {
-        var bytes = await _service.DownloadProductsImportTemplateAsync(cancellationToken);
+        var templatePath = Path.Combine(_environment.ContentRootPath, "Templates", "MauFileSanPham.xlsx");
+        if (!System.IO.File.Exists(templatePath))
+            return NotFound(new { title = "Template not found", detail = "Không tìm thấy file mẫu sản phẩm trên server." });
+
+        var bytes = await System.IO.File.ReadAllBytesAsync(templatePath, cancellationToken);
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "MauFileSanPham.xlsx");
     }

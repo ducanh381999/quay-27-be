@@ -4,6 +4,7 @@ public sealed class ExportProductsExcelRequest
 {
     public string? Search { get; set; }
     public string? GroupId { get; set; }
+    public IReadOnlyList<Guid>? GroupIds { get; set; }
     public string? Stock { get; set; }
     public string? DirectSale { get; set; }
     public string? Status { get; set; }

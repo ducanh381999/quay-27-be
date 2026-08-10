@@ -171,6 +171,9 @@ public class ProductExportServiceTests
         public Task<IReadOnlyList<Product>> ListByGroupIdsAsync(IReadOnlyList<Guid> groupIds, CancellationToken cancellationToken = default) =>
             Task.FromResult((IReadOnlyList<Product>)Array.Empty<Product>());
 
+        public Task<IReadOnlyDictionary<Guid, int>> CountActiveByGroupAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult((IReadOnlyDictionary<Guid, int>)new Dictionary<Guid, int>());
+
         public Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
             Task.FromResult(_items.FirstOrDefault(x => x.Id == id));
 

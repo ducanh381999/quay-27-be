@@ -72,7 +72,11 @@ public static class DependencyInjection
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<ICustomerGroupMembershipSyncService, CustomerGroupMembershipSyncService>();
         services.AddOptions<R2StorageOptions>()
-            .Bind(configuration.GetSection(R2StorageOptions.SectionName));
+            .Bind(configuration.GetSection(R2StorageOptions.SectionName))
+            .Validate(
+                options => options.MaxFileSizeBytes > 0,
+                "R2Storage:MaxFileSizeBytes must be greater than 0.")
+            .ValidateOnStart();
         services.AddScoped<IObjectStorageClient, R2ObjectStorageClient>();
 
         return services;

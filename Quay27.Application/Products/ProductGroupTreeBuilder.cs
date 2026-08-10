@@ -4,7 +4,9 @@ namespace Quay27.Application.Products;
 
 public static class ProductGroupTreeBuilder
 {
-    public static IReadOnlyList<ProductGroupTreeDto> Build(IReadOnlyList<ProductGroup> groups)
+    public static IReadOnlyList<ProductGroupTreeDto> Build(
+        IReadOnlyList<ProductGroup> groups,
+        IReadOnlyDictionary<Guid, int>? productCounts = null)
     {
         var byParent = groups.ToLookup(x => x.ParentId);
         return BuildRecursive(null);
@@ -15,11 +17,17 @@ public static class ProductGroupTreeBuilder
             if (children.Count == 0)
                 return Array.Empty<ProductGroupTreeDto>();
 
-            return children.Select(x => new ProductGroupTreeDto
+            return children.Select(x =>
             {
-                Id = x.Id,
-                Name = x.Name,
-                Children = BuildRecursive(x.Id)
+                var nested = BuildRecursive(x.Id);
+                var selfCount = productCounts?.GetValueOrDefault(x.Id) ?? 0;
+                return new ProductGroupTreeDto
+                {
+                    Id = x.Id,
+                    Name = x.Name,
+                    ProductCount = selfCount + nested.Sum(c => c.ProductCount),
+                    Children = nested
+                };
             }).ToList();
         }
     }

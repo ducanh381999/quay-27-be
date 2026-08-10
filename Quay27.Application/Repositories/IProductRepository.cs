@@ -8,6 +8,7 @@ public interface IProductRepository
     Task<(IReadOnlyList<Product> Items, int Total)> ListAsync(ProductQuery query, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Product>> ListAllActiveAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Product>> ListByGroupIdsAsync(IReadOnlyList<Guid> groupIds, CancellationToken cancellationToken = default);
+    Task<IReadOnlyDictionary<Guid, int>> CountActiveByGroupAsync(CancellationToken cancellationToken = default);
     Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<Product?> GetTrackedByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<bool> CodeExistsAsync(string code, Guid? excludeId = null, CancellationToken cancellationToken = default);

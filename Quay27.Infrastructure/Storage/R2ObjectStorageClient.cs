@@ -12,7 +12,8 @@ namespace Quay27.Infrastructure.Storage;
 public sealed class R2ObjectStorageClient : IObjectStorageClient
 {
     private readonly R2StorageOptions _options;
-    private readonly IAmazonS3 _s3Client;
+    private readonly IAmazonS3? _s3Client;
+    private readonly string? _configurationError;
     private readonly ILogger<R2ObjectStorageClient> _logger;
 
     public R2ObjectStorageClient(IOptions<R2StorageOptions> options)
@@ -26,8 +27,16 @@ public sealed class R2ObjectStorageClient : IObjectStorageClient
     {
         _options = options.Value;
         _logger = logger;
+        _configurationError = _options.GetConfigurationError();
 
-        var serviceUrl = $"https://{_options.AccountId}.r2.cloudflarestorage.com";
+        if (_configurationError is not null)
+        {
+            _s3Client = null;
+            _logger.LogWarning("R2 storage is not configured: {Error}", _configurationError);
+            return;
+        }
+
+        var serviceUrl = $"https://{_options.AccountId.Trim()}.r2.cloudflarestorage.com";
         var config = new AmazonS3Config
         {
             ServiceURL = serviceUrl,
@@ -42,8 +51,19 @@ public sealed class R2ObjectStorageClient : IObjectStorageClient
         Guid uploadedByUserId,
         CancellationToken cancellationToken = default)
     {
+        if (_s3Client is null || _configurationError is not null)
+        {
+            throw new UpstreamDependencyException(
+                $"Image upload is unavailable because object storage is not configured. {_configurationError}",
+                errorCode: "r2_storage_not_configured");
+        }
+
         if (request.ContentLength > _options.MaxFileSizeBytes)
-            throw new InvalidOperationException("Uploaded file exceeds configured size limit.");
+        {
+            var maxMb = Math.Max(1, _options.MaxFileSizeBytes / (1024 * 1024));
+            throw new AppValidationException(
+                $"Uploaded file exceeds the maximum size of {maxMb}MB.");
+        }
 
         var extension = Path.GetExtension(request.FileName);
         var assetId = Guid.NewGuid().ToString("N");

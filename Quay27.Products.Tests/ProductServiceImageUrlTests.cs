@@ -175,6 +175,9 @@ public class ProductServiceImageUrlTests
 
         public Task<IReadOnlyList<Product>> ListByGroupIdsAsync(IReadOnlyList<Guid> groupIds, CancellationToken cancellationToken = default) =>
             Task.FromResult((IReadOnlyList<Product>)Array.Empty<Product>());
+
+        public Task<IReadOnlyDictionary<Guid, int>> CountActiveByGroupAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult((IReadOnlyDictionary<Guid, int>)new Dictionary<Guid, int>());
     }
 
     private sealed class ListProductRepository : IProductRepository
@@ -205,6 +208,9 @@ public class ProductServiceImageUrlTests
 
         public Task<IReadOnlyList<Product>> ListByGroupIdsAsync(IReadOnlyList<Guid> groupIds, CancellationToken cancellationToken = default) =>
             Task.FromResult((IReadOnlyList<Product>)Array.Empty<Product>());
+
+        public Task<IReadOnlyDictionary<Guid, int>> CountActiveByGroupAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult((IReadOnlyDictionary<Guid, int>)new Dictionary<Guid, int>());
     }
 
     private sealed class FakeCurrentUser(bool isAuthenticated) : ICurrentUser

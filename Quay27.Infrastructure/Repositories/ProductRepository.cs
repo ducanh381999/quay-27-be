@@ -28,7 +28,15 @@ public class ProductRepository : IProductRepository
             q = q.Where(x => x.Code.Contains(search) || x.Name.Contains(search));
         }
 
-        if (!string.IsNullOrWhiteSpace(query.GroupId) && query.GroupId != "all")
+        if (query.GroupIds is { Count: > 0 })
+        {
+            var ids = query.GroupIds.Where(g => g != Guid.Empty).Distinct().ToList();
+            if (ids.Count > 0)
+            {
+                q = q.Where(x => x.GroupId.HasValue && ids.Contains(x.GroupId.Value));
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(query.GroupId) && query.GroupId != "all")
         {
             var group = query.GroupId.Trim();
             var hasGroupGuid = Guid.TryParse(group, out var groupGuid);
@@ -93,6 +101,19 @@ public class ProductRepository : IProductRepository
             .Include(x => x.Group)
             .Where(x => !x.IsDeleted && x.RowStatus == "active" && x.GroupId.HasValue && groupIds.Contains(x.GroupId.Value))
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, int>> CountActiveByGroupAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var rows = await _db.Products
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted && x.GroupId.HasValue)
+            .GroupBy(x => x.GroupId!.Value)
+            .Select(g => new { GroupId = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        return rows.ToDictionary(x => x.GroupId, x => x.Count);
     }
 
     public Task<Product?> GetTrackedByIdAsync(Guid id, CancellationToken cancellationToken = default) =>

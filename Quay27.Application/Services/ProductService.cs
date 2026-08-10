@@ -44,6 +44,32 @@ public class ProductService : IProductService
     public async Task<ProductListResponse> ListAsync(ProductQuery query, CancellationToken cancellationToken = default)
     {
         EnsureAuthenticated();
+
+        if (query.GroupIds is { Count: > 0 })
+        {
+            var parsed = query.GroupIds.Where(g => g != Guid.Empty).Distinct().ToList();
+            if (parsed.Count > 0)
+            {
+                var allGroups = await _groups.ListAsync(cancellationToken);
+                query = new ProductQuery
+                {
+                    Search = query.Search,
+                    GroupId = null,
+                    GroupIds = ExpandDescendantGroupIds(allGroups, parsed),
+                    Stock = query.Stock,
+                    DirectSale = query.DirectSale,
+                    Status = query.Status,
+                    CreatedFrom = query.CreatedFrom,
+                    CreatedTo = query.CreatedTo,
+                    ExpectedFrom = query.ExpectedFrom,
+                    ExpectedTo = query.ExpectedTo,
+                    Page = query.Page,
+                    PageSize = query.PageSize,
+                    PriceListId = query.PriceListId
+                };
+            }
+        }
+
         var (items, total) = await _products.ListAsync(query, cancellationToken);
         IReadOnlyDictionary<Guid, decimal>? listPrices = null;
         if (query.PriceListId is { } priceListId)
@@ -327,7 +353,8 @@ public class ProductService : IProductService
     {
         EnsureAuthenticated();
         var groups = await _groups.ListAsync(cancellationToken);
-        return ProductGroupTreeBuilder.Build(groups);
+        var counts = await _products.CountActiveByGroupAsync(cancellationToken);
+        return ProductGroupTreeBuilder.Build(groups, counts);
     }
 
     public async Task<ProductGroupDto> CreateGroupAsync(CreateProductGroupRequest request, CancellationToken cancellationToken = default)
@@ -1030,6 +1057,7 @@ public class ProductService : IProductService
         {
             Search = request.Search,
             GroupId = request.GroupId,
+            GroupIds = request.GroupIds,
             Stock = request.Stock,
             DirectSale = request.DirectSale,
             Status = request.Status,
@@ -1425,8 +1453,11 @@ public class ProductService : IProductService
                     break;
                 case "nhomhang":
                 case "nhómhàng":
+                case "nhomhang3cap":
+                case "nhómhàng3cấp":
                 case "group":
                 case "groupname":
+                case "groupname3level":
                     map["groupName"] = cell.Address.ColumnNumber;
                     break;
                 case "thuonghieu":
@@ -1451,11 +1482,15 @@ public class ProductService : IProductService
                     break;
                 case "tontoithieu":
                 case "tồntốithiểu":
+                case "tonnhonhat":
+                case "tồnnhỏnhất":
                 case "minstock":
                     map["minStock"] = cell.Address.ColumnNumber;
                     break;
                 case "tontoida":
                 case "tồntốiđa":
+                case "tonlonnhat":
+                case "tồnlớnhất":
                 case "maxstock":
                     map["maxStock"] = cell.Address.ColumnNumber;
                     break;
@@ -1482,6 +1517,8 @@ public class ProductService : IProductService
                     break;
                 case "bantructiep":
                 case "bántrựctiếp":
+                case "duocbantructiep":
+                case "đượcbántrựctiếp":
                 case "directsale":
                     map["directSale"] = cell.Address.ColumnNumber;
                     break;
@@ -1490,6 +1527,30 @@ public class ProductService : IProductService
                 case "itemtype":
                 case "producttype":
                     map["itemType"] = cell.Address.ColumnNumber;
+                    break;
+                case "hinhanh":
+                case "hìnhảnh":
+                case "hinhanhurl1url2":
+                case "hìnhảnhurl1url2":
+                case "image":
+                case "images":
+                case "imageurl":
+                case "imageurls":
+                    map["imageUrls"] = cell.Address.ColumnNumber;
+                    break;
+                case "trongluong":
+                case "trọnglượng":
+                    map["weightValue"] = cell.Address.ColumnNumber;
+                    break;
+                case "dangkinhdoanh":
+                case "đangkinhdoanh":
+                case "isactive":
+                    map["isActive"] = cell.Address.ColumnNumber;
+                    break;
+                case "maughichu":
+                case "mẫughichú":
+                case "invoicenotetemplate":
+                    map["invoiceNoteTemplate"] = cell.Address.ColumnNumber;
                     break;
             }
         }
@@ -1529,18 +1590,52 @@ public class ProductService : IProductService
         var value = NormalizeNull(groupName);
         if (value is null) return null;
 
-        var existing = await _groups.GetByNameAsync(value, cancellationToken);
-        if (existing is not null) return existing;
+        var segments = value
+            .Split('>', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Select(s => s.Trim())
+            .ToList();
 
-        var created = new ProductGroup
+        if (segments.Count == 0) return null;
+
+        ProductGroup? parent = null;
+        ProductGroup? current = null;
+        foreach (var segment in segments)
         {
-            Id = Guid.NewGuid(),
-            Name = value,
-            CreatedDate = DateTime.UtcNow
-        };
-        await _groups.AddAsync(created, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return created;
+            current = await _groups.GetByNameAsync(segment, cancellationToken);
+            if (current is null)
+            {
+                current = new ProductGroup
+                {
+                    Id = Guid.NewGuid(),
+                    Name = segment,
+                    ParentId = parent?.Id,
+                    CreatedDate = DateTime.UtcNow
+                };
+                await _groups.AddAsync(current, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+            else if (parent is not null && current.ParentId != parent.Id && current.ParentId is null)
+            {
+                // Keep existing parent if already set; only attach orphans under path parent.
+                current.ParentId = parent.Id;
+                current.UpdatedDate = DateTime.UtcNow;
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+
+            parent = current;
+        }
+
+        return current;
+    }
+
+    private static string? ParseFirstImageUrl(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        var first = raw
+            .Split([',', ';', '|', '\n'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault();
+        return ProductMappings.NormalizeDisplayImageUrl(first);
     }
 
     private static ProductListItemDto Map(Product x, ProductGroup? g = null, decimal? salePriceInPriceList = null)
@@ -1596,8 +1691,19 @@ public class ProductService : IProductService
     private static string? NormalizeNull(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    private static string NormalizeHeader(string? value) =>
-        (value ?? string.Empty).Trim().Replace(" ", string.Empty).ToLowerInvariant();
+    private static string NormalizeHeader(string? value)
+    {
+        var raw = (value ?? string.Empty).Trim().ToLowerInvariant();
+        var buffer = new char[raw.Length];
+        var n = 0;
+        foreach (var ch in raw)
+        {
+            if (char.IsLetterOrDigit(ch))
+                buffer[n++] = ch;
+        }
+
+        return new string(buffer, 0, n);
+    }
 
     private static bool IsProductImportRowBlank(IXLRow row, IReadOnlyDictionary<string, int> headerMap)
     {
@@ -1643,12 +1749,15 @@ public class ProductService : IProductService
             WeightUnit = ReadOptionalString(row, headerMap, "weightUnit"),
             Description = ReadOptionalString(row, headerMap, "description"),
             DirectSale = ReadOptionalBool(row, headerMap, "directSale"),
-            ItemType = ReadOptionalString(row, headerMap, "itemType")
+            ItemType = ReadOptionalString(row, headerMap, "itemType"),
+            ImageUrls = ReadOptionalString(row, headerMap, "imageUrls"),
+            InvoiceNoteTemplate = ReadOptionalString(row, headerMap, "invoiceNoteTemplate")
         };
     }
 
     private static UpsertProductRequest BuildCreateRequest(ProductImportRowData row)
     {
+        var imageUrl = ParseFirstImageUrl(row.ImageUrls);
         return new UpsertProductRequest
         {
             Code = row.Code.Trim(),
@@ -1666,8 +1775,9 @@ public class ProductService : IProductService
             WeightValue = row.WeightValue ?? 0,
             WeightUnit = NormalizeWeightUnit(row.WeightUnit) ?? "g",
             Description = row.Description,
+            InvoiceNoteTemplate = row.InvoiceNoteTemplate,
             DirectSale = row.DirectSale ?? false,
-            Images = Array.Empty<string>(),
+            Images = string.IsNullOrWhiteSpace(imageUrl) ? Array.Empty<string>() : [imageUrl],
             UploadedImageAssets = Array.Empty<UploadedImageReferenceDto>(),
             ComboComponents = Array.Empty<ProductComboComponentDto>()
         };
@@ -1696,9 +1806,13 @@ public class ProductService : IProductService
             WeightUnit = NormalizeWeightUnit(row.WeightUnit) ?? "kg",
             Description = options.UpdateDescription ? row.Description : existing.Description,
             DescriptionRichText = existing.DescriptionRichText,
-            InvoiceNoteTemplate = existing.InvoiceNoteTemplate,
+            InvoiceNoteTemplate = row.InvoiceNoteTemplate is not null
+                ? row.InvoiceNoteTemplate
+                : existing.InvoiceNoteTemplate,
             DirectSale = row.DirectSale ?? existing.DirectSale,
-            Images = Array.Empty<string>(),
+            Images = string.IsNullOrWhiteSpace(ParseFirstImageUrl(row.ImageUrls))
+                ? (string.IsNullOrWhiteSpace(existing.ImageUrl) ? Array.Empty<string>() : [existing.ImageUrl])
+                : [ParseFirstImageUrl(row.ImageUrls)!],
             UploadedImageAssets = Array.Empty<UploadedImageReferenceDto>(),
             ComboComponents = Array.Empty<ProductComboComponentDto>()
         };
@@ -1805,7 +1919,7 @@ public class ProductService : IProductService
             "itemType" => GetExportItemType(product.ItemType),
             "code" => product.Code,
             "name" => product.Name,
-            "imageUrls" => product.ImageUrl ?? string.Empty,
+            "imageUrls" => ProductMappings.NormalizeDisplayImageUrl(product.ImageUrl) ?? string.Empty,
             "directSale" => product.DirectSale ? "Có" : "Không",
             "groupName3Level" => BuildGroupPath(product.GroupId, groupNameById, groupParentById),
             "barcode" => product.Barcode ?? string.Empty,
@@ -1883,6 +1997,8 @@ public class ProductService : IProductService
         public string? Description { get; init; }
         public bool? DirectSale { get; init; }
         public string? ItemType { get; init; }
+        public string? ImageUrls { get; init; }
+        public string? InvoiceNoteTemplate { get; init; }
     }
 
     private static PriceListDto Map(PriceList x) =>

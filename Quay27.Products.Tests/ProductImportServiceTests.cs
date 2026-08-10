@@ -45,6 +45,39 @@ public class ProductImportServiceTests
     }
 
     [Fact]
+    public async Task ImportProductsExcelAsync_should_create_nested_groups_from_double_gt_path()
+    {
+        var repo = new ImportProductRepository([]);
+        var groups = new ImportProductGroupRepository();
+        var service = CreateService(repo, groups);
+
+        var result = await service.ImportProductsExcelAsync(new ImportProductsExcelRequest
+        {
+            FileBytes = BuildWorkbookBytes([
+                new object?[] { "SP002", "Hang moi", "8930002", "20>>20.2 OK", "Brand B", 10000m, 20000m, 5, 0, 0, null, null, null, null, "Có", "goods" }
+            ]),
+            FileName = "MauFileSanPham.xlsx",
+            DuplicateCodeConflictAction = ProductImportConflictAction.Error,
+            DuplicateBarcodeConflictAction = ProductImportConflictAction.Error,
+            UpdateStock = false,
+            UpdateCostPrice = false,
+            UpdateDescription = false
+        }, CancellationToken.None);
+
+        Assert.Equal(1, result.ImportedCount);
+        Assert.Empty(result.Errors);
+        Assert.Equal(2, groups.AddedGroups.Count);
+
+        var parent = Assert.Single(groups.AddedGroups, g => g.Name == "20");
+        var leaf = Assert.Single(groups.AddedGroups, g => g.Name == "20.2 OK");
+        Assert.Null(parent.ParentId);
+        Assert.Equal(parent.Id, leaf.ParentId);
+
+        var created = Assert.Single(repo.AddedProducts);
+        Assert.Equal(leaf.Id, created.GroupId);
+    }
+
+    [Fact]
     public async Task ImportProductsExcelAsync_should_preserve_optional_fields_when_flags_are_off()
     {
         var existing = BuildProduct(
@@ -233,6 +266,9 @@ public class ProductImportServiceTests
 
         public Task<IReadOnlyList<Product>> ListByGroupIdsAsync(IReadOnlyList<Guid> groupIds, CancellationToken cancellationToken = default) =>
             Task.FromResult((IReadOnlyList<Product>)Array.Empty<Product>());
+
+        public Task<IReadOnlyDictionary<Guid, int>> CountActiveByGroupAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult((IReadOnlyDictionary<Guid, int>)new Dictionary<Guid, int>());
 
         public Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
             Task.FromResult(_items.FirstOrDefault(x => x.Id == id));

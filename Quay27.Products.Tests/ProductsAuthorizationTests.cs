@@ -144,6 +144,7 @@ public class ProductsAuthorizationTests
         public Task<(IReadOnlyList<Domain.Entities.Product> Items, int Total)> ListAsync(Application.Products.ProductQuery query, CancellationToken cancellationToken = default) => Task.FromResult(((IReadOnlyList<Domain.Entities.Product>)Array.Empty<Domain.Entities.Product>(), 0));
         public Task<IReadOnlyList<Domain.Entities.Product>> ListAllActiveAsync(CancellationToken cancellationToken = default) => Task.FromResult((IReadOnlyList<Domain.Entities.Product>)Array.Empty<Domain.Entities.Product>());
         public Task<IReadOnlyList<Domain.Entities.Product>> ListByGroupIdsAsync(IReadOnlyList<Guid> groupIds, CancellationToken cancellationToken = default) => Task.FromResult((IReadOnlyList<Domain.Entities.Product>)Array.Empty<Domain.Entities.Product>());
+        public Task<IReadOnlyDictionary<Guid, int>> CountActiveByGroupAsync(CancellationToken cancellationToken = default) => Task.FromResult((IReadOnlyDictionary<Guid, int>)new Dictionary<Guid, int>());
     }
 
     private sealed class NoopGroups : IProductGroupRepository
