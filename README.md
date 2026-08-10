@@ -33,6 +33,10 @@ Edit `appsettings.json` (or user secrets / environment variables):
 | `Seed:AdminPassword` | Password for the seeded `admin` user (development; change in production) |
 | `DemoSeed:StaffPassword` | Password for demo staff users `staff1`–`staff4` (used by `POST /api/setup/demo-data`) |
 | `Cors:AllowedOrigins` | Browser origins for SignalR + credentialed cross-origin calls (e.g. `http://localhost:3000` for Next.js dev) |
+| `R2Storage:AccountId`, `AccessKeyId`, `SecretAccessKey`, `BucketName`, `PublicBaseUrl` | Cloudflare R2 for product image upload (`POST /api/products/uploads/images`) |
+| `R2Storage:MaxFileSizeBytes` | Max upload size in bytes (default **10485760** = 10MB). Override via env `R2Storage__MaxFileSizeBytes` on VPS/docker-compose. |
+
+**Production / VPS:** set R2 keys via environment variables (`R2Storage__AccountId`, etc.) rather than baking secrets into `appsettings.Production.json`. If upload fails with 413, check reverse-proxy `client_max_body_size` (nginx) or equivalent is at least 10MB. Do not leave `R2Storage__MaxFileSizeBytes=2097152` (2MB) in `.env` — remove the key or set `10485760`.
 
 ### Demo sheet data (FE / local)
 

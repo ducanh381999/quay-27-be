@@ -9,6 +9,7 @@ using Quay27.Application.Abstractions;
 using Quay27.Domain.Entities;
 using Quay27.Infrastructure;
 using Quay27.Infrastructure.Persistence;
+using Quay27.Infrastructure.Storage;
 using Quay27_Be.Background;
 using Quay27_Be.Hubs;
 using Quay27_Be.Middleware;
@@ -85,9 +86,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 builder.Services.AddFluentValidationAutoValidation();
+var maxUploadBytes = builder.Configuration.GetValue<long?>("R2Storage:MaxFileSizeBytes")
+    ?? R2StorageOptions.DefaultMaxFileSizeBytes;
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
 {
-    options.MultipartBodyLengthLimit = Quay27.Infrastructure.Storage.R2StorageOptions.DefaultMaxFileSizeBytes;
+    options.MultipartBodyLengthLimit = maxUploadBytes;
 });
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
