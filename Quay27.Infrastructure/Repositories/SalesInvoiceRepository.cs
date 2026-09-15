@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Quay27.Application.Orders;
+using Quay27.Application.Products;
 using Quay27.Application.Reports;
 using Quay27.Application.Repositories;
 using Quay27.Domain.Entities;
@@ -397,12 +398,40 @@ public sealed class SalesInvoiceRepository : ISalesInvoiceRepository
         if (invoice is null)
             return null;
 
+        var productIds = invoice.Items.Select(x => x.ProductId).Distinct().ToList();
+        var imageByProductId = await _db.Products.AsNoTracking()
+            .Where(p => productIds.Contains(p.Id))
+            .Select(p => new { p.Id, p.ImageUrl })
+            .ToDictionaryAsync(x => x.Id, x => x.ImageUrl, cancellationToken);
+
+        string? customerAddress = null;
+        decimal previousDebt = 0m;
+        if (!string.IsNullOrWhiteSpace(invoice.CustomerCode))
+        {
+            var code = invoice.CustomerCode.Trim();
+            var profile = await _db.CustomerProfiles.AsNoTracking()
+                .Where(p => !p.IsDeleted && p.CustomerCode == code)
+                .Select(p => new
+                {
+                    p.InvoiceAddress,
+                    p.Address,
+                    p.ManualCurrentDebt
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+            if (profile is not null)
+            {
+                customerAddress = FirstNonEmpty(profile.InvoiceAddress, profile.Address);
+                previousDebt = profile.ManualCurrentDebt ?? 0m;
+            }
+        }
+
         var lines = invoice.Items
             .OrderBy(x => x.ProductCode)
             .Select(line =>
             {
                 var gross = line.Quantity * line.UnitPrice;
                 var discount = gross > line.LineTotal ? gross - line.LineTotal : 0m;
+                imageByProductId.TryGetValue(line.ProductId, out var rawImage);
                 return new SalesInvoiceLineDto(
                     line.Id,
                     line.ProductCode,
@@ -412,9 +441,12 @@ public sealed class SalesInvoiceRepository : ISalesInvoiceRepository
                     discount,
                     line.UnitPrice,
                     line.LineTotal,
-                    line.Note);
+                    line.Note,
+                    ProductMappings.NormalizeDisplayImageUrl(rawImage));
             })
             .ToList();
+
+        var totalQuantity = lines.Sum(x => x.Quantity);
 
         return new SalesInvoiceDetailDto(
             invoice.Id,
@@ -422,6 +454,7 @@ public sealed class SalesInvoiceRepository : ISalesInvoiceRepository
             invoice.Status,
             invoice.CustomerCode,
             invoice.CustomerName,
+            customerAddress,
             invoice.CreatedAtUtc,
             UserDisplayName(invoice.CreatedByUser),
             UserDisplayName(invoice.SellerUser),
@@ -434,8 +467,21 @@ public sealed class SalesInvoiceRepository : ISalesInvoiceRepository
             invoice.DiscountAmount,
             invoice.SubtotalAmount - invoice.DiscountAmount,
             invoice.PaidAmount,
+            previousDebt,
+            totalQuantity,
             "Chi nhánh trung tâm",
             lines);
+    }
+
+    private static string? FirstNonEmpty(params string?[] values)
+    {
+        foreach (var v in values)
+        {
+            if (!string.IsNullOrWhiteSpace(v))
+                return v.Trim();
+        }
+
+        return null;
     }
 
     public async Task<IReadOnlyList<SalesInvoiceCashbookRowDto>> ListCashbookEntriesAsync(

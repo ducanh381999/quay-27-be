@@ -22,7 +22,8 @@ public sealed record SalesInvoiceLineDto(
     decimal Discount,
     decimal SellingPrice,
     decimal LineTotal,
-    string? Note);
+    string? Note,
+    string? ImageUrl);
 
 public sealed record SalesInvoiceDetailDto(
     Guid Id,
@@ -30,6 +31,7 @@ public sealed record SalesInvoiceDetailDto(
     string Status,
     string? CustomerCode,
     string? CustomerName,
+    string? CustomerAddress,
     DateTime CreatedAtUtc,
     string? CreatedByDisplayName,
     string? SellerDisplayName,
@@ -42,6 +44,8 @@ public sealed record SalesInvoiceDetailDto(
     decimal DiscountAmount,
     decimal AmountDue,
     decimal AmountPaid,
+    decimal PreviousDebt,
+    int TotalQuantity,
     string BranchLabel,
     IReadOnlyList<SalesInvoiceLineDto> Lines);
 
